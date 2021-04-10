@@ -1,0 +1,16 @@
+[package]
+name = "archive-postgres"
+version = "0.1.0"
+authors = ["Patract <https://github.com/patractlabs>"]
+edition = "2018"
+
+[dependencies]
+async-trait = "0.1"
+hex = "0.4"
+log = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+sqlx = { version = "0.5", features = ["postgres", "runtime-tokio-rustls", "json"] }
+
+[dev-dependencies]
+env_logger = "0.8"
+tokio = { version = "1.4", features = ["macros"] }
