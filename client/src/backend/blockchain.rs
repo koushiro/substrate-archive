@@ -13,7 +13,7 @@ use sp_runtime::{
 
 use crate::{
     columns,
-    database::{DbHash, ReadOnlyDB},
+    database::{DbHash, ReadOnlyDb},
     error::{backend_err, BlockchainError, BlockchainResult},
     utils::{self, meta_keys},
 };
@@ -39,7 +39,7 @@ struct ExtrinsicHeader {
 
 // Block database
 pub struct BlockchainDb<Block: BlockT> {
-    db: Arc<dyn ReadOnlyDB>,
+    db: Arc<dyn ReadOnlyDb>,
     // meta: Arc<RwLock<Meta<NumberFor<Block>, Block::Hash>>>,
     header_metadata_cache: Arc<HeaderMetadataCache<Block>>,
     transaction_storage: TransactionStorageMode,
@@ -50,7 +50,7 @@ where
     Block: BlockT,
 {
     pub fn new(
-        db: Arc<dyn ReadOnlyDB>,
+        db: Arc<dyn ReadOnlyDb>,
         transaction_storage: TransactionStorageMode,
     ) -> BlockchainResult<Self> {
         Ok(Self {

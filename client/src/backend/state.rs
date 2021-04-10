@@ -12,13 +12,13 @@ use sp_state_machine::{
 };
 use sp_storage::ChildInfo;
 
-use crate::{columns, database::ReadOnlyDB};
+use crate::{columns, database::ReadOnlyDb};
 
 /// DB-backed patricia trie state, transaction type is an overlay of changes to commit.
 pub type DbState<Block> = TrieBackend<Arc<dyn Storage<HashFor<Block>>>, HashFor<Block>>;
 
 pub struct StorageDb<Block: BlockT> {
-    pub db: Arc<dyn ReadOnlyDB>,
+    pub db: Arc<dyn ReadOnlyDb>,
     pub state_db: StateDb<Block::Hash, Vec<u8>>,
     pub prefix_keys: bool,
 }
@@ -45,7 +45,7 @@ impl<Block: BlockT> NodeDb for StorageDb<Block> {
 }
 
 // wrapper that implements trait required for state_db
-pub struct StateMetaDb<'a>(pub &'a dyn ReadOnlyDB);
+pub struct StateMetaDb<'a>(pub &'a dyn ReadOnlyDb);
 impl<'a> MetaDb for StateMetaDb<'a> {
     type Error = DefaultError;
 

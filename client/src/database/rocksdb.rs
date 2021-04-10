@@ -7,15 +7,15 @@ use sp_database::{ColumnId, Database as DatabaseT, Transaction};
 
 use crate::{columns, database::DbHash, utils::NUM_COLUMNS};
 
-pub struct SecondaryRocksDB(Database);
-impl fmt::Debug for SecondaryRocksDB {
+pub struct SecondaryRocksDb(Database);
+impl fmt::Debug for SecondaryRocksDb {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let stats = self.0.io_stats(IoStatsKind::Overall);
         write!(f, "Read Only Database Stats: {:?}", stats)
     }
 }
 
-impl SecondaryRocksDB {
+impl SecondaryRocksDb {
     pub fn open(path: PathBuf, cache_size: usize, secondary_db_path: PathBuf) -> io::Result<Self> {
         let path = path.to_str().expect("cannot find primary rocksdb");
         let secondary_db_path = secondary_db_path
@@ -83,7 +83,7 @@ impl SecondaryRocksDB {
 
 type DatabaseResult<T> = sp_database::error::Result<T>;
 
-impl DatabaseT<DbHash> for SecondaryRocksDB {
+impl DatabaseT<DbHash> for SecondaryRocksDb {
     fn commit(&self, _transaction: Transaction<DbHash>) -> DatabaseResult<()> {
         panic!("Read Only Database")
     }

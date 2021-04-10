@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use archive_postgres::{
-    migrate, BlockModel, Insert, MetadataModel, PostgresConfig, PostgresDB, SqlxError,
+    migrate, BlockModel, Insert, MetadataModel, PostgresConfig, PostgresDb, SqlxError,
 };
 
 #[tokio::main]
@@ -19,7 +19,7 @@ async fn main() -> Result<(), SqlxError> {
 
     migrate(config.uri()).await?;
 
-    let db = PostgresDB::new(config).await?;
+    let db = PostgresDb::new(config).await?;
     let mut conn = db.conn().await?;
 
     let metadata = MetadataModel {

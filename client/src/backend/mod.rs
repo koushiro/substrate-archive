@@ -23,7 +23,7 @@ use self::{
 };
 use crate::{
     columns,
-    database::ReadOnlyDB,
+    database::ReadOnlyDb,
     error::{backend_err, unknown_block_err, BlockchainError, BlockchainResult},
 };
 
@@ -38,6 +38,7 @@ pub struct DatabaseSettings {
 pub struct ReadOnlyBackend<Block: BlockT> {
     storage: Arc<StorageDb<Block>>,
     blockchain: BlockchainDb<Block>,
+    #[allow(dead_code)]
     transaction_storage: TransactionStorageMode,
     is_archive: bool,
     // changes_tries_storage: DbChangesTrieStorage<Block>,
@@ -47,9 +48,9 @@ impl<Block: BlockT> ReadOnlyBackend<Block> {
     /// Create a new instance of database backend.
     ///
     /// The pruning window is how old a block must be before the state is pruned.
-    pub fn new(db: Arc<dyn ReadOnlyDB>, config: &DatabaseSettings) -> BlockchainResult<Self> {
+    pub fn new(db: Arc<dyn ReadOnlyDb>, config: &DatabaseSettings) -> BlockchainResult<Self> {
         let state_db = StateDb::new(config.state_pruning.clone(), true, &StateMetaDb(&*db))
-            .map_err(|err| BlockchainError::from_state_db(err))?;
+            .map_err(BlockchainError::from_state_db)?;
         let storage_db = StorageDb {
             db: db.clone(),
             state_db,
@@ -133,7 +134,7 @@ where
     /// Returns true if state for given block is available.
     fn have_state_at(&self, hash: &Block::Hash, number: NumberFor<Block>) -> bool {
         if self.is_archive {
-            match self.blockchain.header_metadata(hash.clone()) {
+            match self.blockchain.header_metadata(*hash) {
                 Ok(header) => self
                     .storage
                     .get(&header.state_root, (&[], None))
@@ -154,7 +155,7 @@ where
             // special case for genesis initialization
             BlockId::Hash(h) if h == Default::default() => {
                 let genesis_storage = DbGenesisStorage::<Block>::new();
-                let root = genesis_storage.0.clone();
+                let root = genesis_storage.0;
                 let db_state = DbState::<Block>::new(Arc::new(genesis_storage), root);
                 let state = RefTrackingState::new(db_state, self.storage.clone(), None);
                 return Ok(state);
@@ -180,7 +181,7 @@ where
                     Ok(RefTrackingState::new(
                         db_state,
                         self.storage.clone(),
-                        Some(hash.clone()),
+                        Some(hash),
                     ))
                 } else {
                     Err(unknown_block_err(format!(

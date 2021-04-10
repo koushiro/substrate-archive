@@ -7,7 +7,7 @@ mod utils;
 pub use self::{
     backend::{DatabaseSettings, ReadOnlyBackend},
     client::Client,
-    database::{DbHash, ReadOnlyDB, SecondaryRocksDB},
+    database::{DbHash, ReadOnlyDb, SecondaryRocksDb},
 };
 
 #[allow(unused)]

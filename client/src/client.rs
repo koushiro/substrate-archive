@@ -32,6 +32,7 @@ where
     backend: Arc<B>,
     executor: E,
     execution_extensions: ExecutionExtensions<Block>,
+    #[allow(dead_code)]
     config: ClientConfig,
     _marker: PhantomData<RA>,
 }

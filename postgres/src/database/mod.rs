@@ -10,12 +10,12 @@ use sqlx::{
 use crate::config::PostgresConfig;
 
 #[derive(Clone)]
-pub struct PostgresDB {
+pub struct PostgresDb {
     config: PostgresConfig,
     pool: PgPool,
 }
 
-impl PostgresDB {
+impl PostgresDb {
     pub async fn new(config: PostgresConfig) -> Result<Self, SqlxError> {
         let pool = PgPoolOptions::new()
             .min_connections(config.min_connections)

@@ -10,7 +10,7 @@ use sp_runtime::{
 };
 
 use crate::{
-    database::ReadOnlyDB,
+    database::ReadOnlyDb,
     error::{backend_err, BlockchainError},
 };
 
@@ -81,7 +81,7 @@ pub fn number_index_key<N: TryInto<u32>>(n: N) -> Result<NumberIndexKey, Blockch
 /// block lookup key is the DB-key header, block and justification are stored under.
 /// looks up lookup key by hash from DB as necessary.
 pub fn block_id_to_lookup_key<Block>(
-    db: &dyn ReadOnlyDB,
+    db: &dyn ReadOnlyDb,
     key_lookup_col: u32,
     id: BlockId<Block>,
 ) -> Result<Option<Vec<u8>>, BlockchainError>
@@ -97,7 +97,7 @@ where
 
 /// Read database column entry for the given block.
 pub fn read_db<Block>(
-    db: &dyn ReadOnlyDB,
+    db: &dyn ReadOnlyDb,
     col_index: u32,
     col: u32,
     id: BlockId<Block>,
@@ -105,15 +105,15 @@ pub fn read_db<Block>(
 where
     Block: BlockT,
 {
-    block_id_to_lookup_key(db, col_index, id).and_then(|key| match key {
-        Some(key) => Ok(db.get(col, key.as_ref())),
-        None => Ok(None),
+    block_id_to_lookup_key(db, col_index, id).map(|key| match key {
+        Some(key) => db.get(col, key.as_ref()),
+        None => None,
     })
 }
 
 /// Read a header from the database.
 pub fn read_header<Block: BlockT>(
-    db: &dyn ReadOnlyDB,
+    db: &dyn ReadOnlyDb,
     col_index: u32,
     col: u32,
     id: BlockId<Block>,
@@ -129,7 +129,7 @@ pub fn read_header<Block: BlockT>(
 
 /// Read genesis hash from database.
 pub fn read_genesis_hash<Hash: Decode>(
-    db: &dyn ReadOnlyDB,
+    db: &dyn ReadOnlyDb,
 ) -> Result<Option<Hash>, BlockchainError> {
     match db.get(COLUMN_META, meta_keys::GENESIS_HASH) {
         Some(h) => match Decode::decode(&mut &h[..]) {
@@ -145,7 +145,7 @@ pub fn read_genesis_hash<Hash: Decode>(
 
 /// Read meta from the database.
 pub fn read_meta<Block>(
-    db: &dyn ReadOnlyDB,
+    db: &dyn ReadOnlyDb,
     col_header: u32,
 ) -> Result<Meta<<<Block as BlockT>::Header as HeaderT>::Number, Block::Hash>, BlockchainError>
 where
@@ -180,7 +180,7 @@ where
             );
             Ok((hash, *header.number()))
         } else {
-            Ok((genesis_hash.clone(), Zero::zero()))
+            Ok((genesis_hash, Zero::zero()))
         }
     };
 
@@ -198,7 +198,7 @@ where
 
 /// Returns the hashes of the children blocks of the block with `parent_hash`.
 pub fn read_children<K, V>(
-    db: &dyn ReadOnlyDB,
+    db: &dyn ReadOnlyDb,
     column: u32,
     prefix: &[u8],
     parent_hash: K,
@@ -237,7 +237,7 @@ impl<'a, 'b> codec::Input for JoinInput<'a, 'b> {
 
     fn read(&mut self, into: &mut [u8]) -> Result<(), codec::Error> {
         let mut read = 0;
-        if self.0.len() > 0 {
+        if !self.0.is_empty() {
             read = std::cmp::min(self.0.len(), into.len());
             self.0.read(&mut into[..read])?;
         }
