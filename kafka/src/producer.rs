@@ -11,6 +11,7 @@ use crate::{
     payload::{BlockPayload, MetadataPayload},
 };
 
+#[derive(Clone)]
 pub struct KafkaProducer {
     config: KafkaConfig,
     producer: FutureProducer,
@@ -40,30 +41,30 @@ impl KafkaProducer {
     }
 
     pub async fn send_metadata(&self, metadata: MetadataPayload) -> Result<(), KafkaError> {
-        log::debug!(
+        log::info!(
             "Kafka publish metadata, version = {}",
             metadata.spec_version
         );
-        let key = metadata.spec_version.to_string();
         let payload =
             serde_json::to_string(&metadata).expect("serialize metadata payload shouldn't be fail");
-        self.send(&self.config.topic.metadata, &key, &payload).await
+        let key = metadata.spec_version.to_string();
+        self.send(&self.config.topic.metadata, &payload, &key).await
     }
 
     pub async fn send_block(&self, block: BlockPayload) -> Result<(), KafkaError> {
-        log::debug!(
+        log::info!(
             "Kafka publish block, number = {}, hash = {}",
             block.block_num,
             block.block_hash
         );
-        let key = block.block_num.to_string();
         let payload =
             serde_json::to_string(&block).expect("serialize block payload shouldn't be fail");
-        self.send(&self.config.topic.block, &key, &payload).await
+        let key = block.block_num.to_string();
+        self.send(&self.config.topic.block, &payload, &key).await
     }
 
-    async fn send(&self, topic: &str, key: &str, payload: &str) -> Result<(), KafkaError> {
-        let record = FutureRecord::to(topic).key(key).payload(payload);
+    async fn send(&self, topic: &str, payload: &str, key: &str) -> Result<(), KafkaError> {
+        let record = FutureRecord::to(topic).payload(payload).key(key);
         let queue_timeout = Duration::from_secs(self.config.queue_timeout);
         let delivery_status = self.producer.send(record, queue_timeout).await;
         match delivery_status {

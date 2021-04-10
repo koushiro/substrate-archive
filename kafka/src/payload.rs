@@ -1,6 +1,6 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MetadataPayload {
     pub spec_version: u32,
     pub block_num: u32,
@@ -8,7 +8,7 @@ pub struct MetadataPayload {
     pub meta: String,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BlockPayload {
     pub spec_version: u32,
     pub block_num: u32,
@@ -19,7 +19,7 @@ pub struct BlockPayload {
     pub digest: String,
     pub extrinsics: Vec<String>,
 
-    pub storages: Vec<StorageChanges>,
+    pub storages: Vec<StorageChange>,
 }
 
-pub type StorageChanges = (Vec<u8>, Option<Vec<u8>>);
+pub type StorageChange = (String, Option<String>);
