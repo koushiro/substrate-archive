@@ -40,10 +40,7 @@ async fn main() -> Result<(), SqlxError> {
             extrinsics_root: vec![0],
             digest: vec![0],
             extrinsics: vec![],
-            storages: vec![(
-                vec![(i % u32::from(u8::MAX)) as u8],
-                Some(vec![(i % u32::from(u8::MAX)) as u8]),
-            )],
+            storages: serde_json::json!([["0x01", "0x1234"], ["0x02", null]]),
         };
         let _ = block.insert(&mut conn).await?;
     }

@@ -41,7 +41,10 @@ impl Insert for MetadataModel {
     }
 
     async fn insert(self, conn: &mut PoolConnection<Postgres>) -> Result<u64, SqlxError> {
-        log::info!("Insert metadata into postgres, version = {}", self.spec_version);
+        log::info!(
+            "Insert metadata into postgres, version = {}",
+            self.spec_version
+        );
         self.gen_query()
             .execute(conn)
             .await
@@ -54,7 +57,7 @@ impl Insert for BlockModel {
     fn gen_query<'q>(self) -> Query<'q, Postgres, PgArguments> {
         sqlx::query(
             r#"
-            INSERT INTO blocks VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            INSERT INTO blocks VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             ON CONFLICT (block_num)
             DO UPDATE SET (
                 spec_version,
@@ -64,7 +67,8 @@ impl Insert for BlockModel {
                 state_root,
                 extrinsics_root,
                 digest,
-                extrinsics
+                extrinsics,
+                storages
             ) = (
                 excluded.spec_version,
                 excluded.block_num,
@@ -73,7 +77,8 @@ impl Insert for BlockModel {
                 excluded.state_root,
                 excluded.extrinsics_root,
                 excluded.digest,
-                excluded.extrinsics
+                excluded.extrinsics,
+                excluded.storages
             );
             "#,
         )
@@ -85,6 +90,7 @@ impl Insert for BlockModel {
         .bind(self.extrinsics_root)
         .bind(self.digest)
         .bind(self.extrinsics)
+        .bind(self.storages)
     }
 
     async fn insert(self, conn: &mut PoolConnection<Postgres>) -> Result<u64, SqlxError> {
