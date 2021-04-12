@@ -1,0 +1,10 @@
+[logger]
+# Optional log level of stdout, default: "DEBUG"
+std = "DEBUG"
+
+# Optional file log.
+[logger.file]
+# Optional log level of file, default: "DEBUG"
+level = "DEBUG"
+# Optional log file path, default: "./archive.log"
+path = "./archive.log"
