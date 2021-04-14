@@ -1,10 +1,14 @@
+// Copy from sc-client-db, but only for readable purpose.
+
 use std::sync::Arc;
 
 use codec::{Decode, Encode};
+use sc_client_db::{DbHash, TransactionStorageMode};
 use sp_blockchain::{
     Backend as BlockchainBackend, BlockStatus, Cache, CachedHeaderMetadata, HeaderBackend,
     HeaderMetadata, HeaderMetadataCache, Info,
 };
+use sp_database::Database;
 use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, Header as HeaderT, NumberFor},
@@ -13,20 +17,9 @@ use sp_runtime::{
 
 use crate::{
     columns,
-    database::{DbHash, ReadOnlyDb},
-    error::{backend_err, BlockchainError, BlockchainResult},
+    error::{backend_err, unknown_block_err, BlockchainError, BlockchainResult},
     utils::{self, meta_keys},
 };
-
-/// Block body storage scheme.
-#[derive(Debug, Clone, Copy)]
-pub enum TransactionStorageMode {
-    /// Store block body as an encoded list of full transactions in the BODY column
-    BlockBody,
-    /// Store a list of hashes in the BODY column and each transaction individually
-    /// in the TRANSACTION column.
-    StorageChain,
-}
 
 /// This is used as block body when storage-chain mode is enabled.
 #[derive(Debug, Encode, Decode)]
@@ -39,9 +32,11 @@ struct ExtrinsicHeader {
 
 // Block database
 pub struct BlockchainDb<Block: BlockT> {
-    db: Arc<dyn ReadOnlyDb>,
+    db: Arc<dyn Database<DbHash>>,
     // meta: Arc<RwLock<Meta<NumberFor<Block>, Block::Hash>>>,
+    // leaves: RwLock<LeafSet<Block::Hash, NumberFor<Block>>>,
     header_metadata_cache: Arc<HeaderMetadataCache<Block>>,
+    // header_cache: Mutex<LinkedHashMap<Block::Hash, Option<Block::Header>>>,
     transaction_storage: TransactionStorageMode,
 }
 
@@ -50,7 +45,7 @@ where
     Block: BlockT,
 {
     pub fn new(
-        db: Arc<dyn ReadOnlyDb>,
+        db: Arc<dyn Database<DbHash>>,
         transaction_storage: TransactionStorageMode,
     ) -> BlockchainResult<Self> {
         Ok(Self {
@@ -175,8 +170,6 @@ where
     }
 
     fn status(&self, id: BlockId<Block>) -> BlockchainResult<BlockStatus> {
-        // log::warn!("Read-only backend does not track Block Status!");
-        // Ok(BlockStatus::Unknown)
         let exists = match id {
             BlockId::Hash(_) => self.header(id)?.is_some(),
             BlockId::Number(n) => {
@@ -225,9 +218,7 @@ where
                         .insert_header_metadata(hash, header_metadata.clone());
                     header_metadata
                 })
-                .ok_or_else(|| {
-                    BlockchainError::UnknownBlock(format!("header not found in db: {}", hash))
-                }),
+                .ok_or_else(|| unknown_block_err(format!("header not found in db: {}", hash))),
         }
     }
 

@@ -4,10 +4,13 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use structopt::StructOpt;
 
+use archive_client::ClientConfig;
+
 use crate::logger::LoggerConfig;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ArchiveConfig {
+    client: ClientConfig,
     logger: LoggerConfig,
 }
 

@@ -1,10 +1,18 @@
-[logger]
-# Optional log level of stdout, default: "DEBUG"
-std = "DEBUG"
+[client]
+wasm_exec_method = "Interpreted" # or "Compiled"
+default_heap_pages = 1024
+max_runtime_instances = 8
+wasm_runtime_overrides = "./wasm_runtime"
 
-# Optional file log.
-[logger.file]
+# RocksDB backend for client
+[client.rocksdb]
+path = "./rocksdb"
+cache_size = 128
+secondary_db_path = "./rocksdb_secondary"
+
+[logger]
+# Optional log level of console, default: "DEBUG"
+console = { level = "DEBUG" }
 # Optional log level of file, default: "DEBUG"
-level = "DEBUG"
 # Optional log file path, default: "./archive.log"
-path = "./archive.log"
+file = { level = "DEBUG", path = "./archive.log" }

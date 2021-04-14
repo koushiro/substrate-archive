@@ -8,8 +8,10 @@ use sc_client_api::{
     backend::{AuxStore, Backend, PrunableStateChangesTrieStorage},
     UsageInfo,
 };
+use sc_client_db::{DbHash, DbState, TransactionStorageMode};
 use sc_state_db::{PruningMode, StateDb};
 use sp_blockchain::{HeaderBackend, HeaderMetadata};
+use sp_database::Database;
 use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, NumberFor, SaturatedConversion},
@@ -18,37 +20,43 @@ use sp_runtime::{
 use sp_state_machine::Storage;
 
 use self::{
-    blockchain::{BlockchainDb, TransactionStorageMode},
-    state::{DbGenesisStorage, DbState, RefTrackingState, StateMetaDb, StorageDb},
+    blockchain::BlockchainDb,
+    state::{DbGenesisStorage, RefTrackingState, StateMetaDb, StorageDb},
 };
 use crate::{
     columns,
-    database::ReadOnlyDb,
     error::{backend_err, unknown_block_err, BlockchainError, BlockchainResult},
 };
 
-/// Database settings.
-pub struct DatabaseSettings {
+/// Backend configurations.
+pub struct BackendConfig {
     /// State pruning mode.
     pub state_pruning: PruningMode,
     /// Block body/Transaction storage scheme.
     pub transaction_storage: TransactionStorageMode,
 }
 
+impl Default for BackendConfig {
+    fn default() -> Self {
+        Self {
+            state_pruning: PruningMode::ArchiveCanonical,
+            transaction_storage: TransactionStorageMode::BlockBody,
+        }
+    }
+}
+
 pub struct ReadOnlyBackend<Block: BlockT> {
     storage: Arc<StorageDb<Block>>,
     blockchain: BlockchainDb<Block>,
-    #[allow(dead_code)]
-    transaction_storage: TransactionStorageMode,
-    is_archive: bool,
     // changes_tries_storage: DbChangesTrieStorage<Block>,
+    config: BackendConfig,
 }
 
 impl<Block: BlockT> ReadOnlyBackend<Block> {
     /// Create a new instance of database backend.
     ///
     /// The pruning window is how old a block must be before the state is pruned.
-    pub fn new(db: Arc<dyn ReadOnlyDb>, config: &DatabaseSettings) -> BlockchainResult<Self> {
+    pub fn new(db: Arc<dyn Database<DbHash>>, config: BackendConfig) -> BlockchainResult<Self> {
         let state_db = StateDb::new(config.state_pruning.clone(), true, &StateMetaDb(&*db))
             .map_err(BlockchainError::from_state_db)?;
         let storage_db = StorageDb {
@@ -61,8 +69,7 @@ impl<Block: BlockT> ReadOnlyBackend<Block> {
         Ok(ReadOnlyBackend {
             storage: Arc::new(storage_db),
             blockchain,
-            is_archive: config.state_pruning.is_archive(),
-            transaction_storage: config.transaction_storage,
+            config,
         })
     }
 }
@@ -133,7 +140,7 @@ where
 
     /// Returns true if state for given block is available.
     fn have_state_at(&self, hash: &Block::Hash, number: NumberFor<Block>) -> bool {
-        if self.is_archive {
+        if self.config.state_pruning.is_archive() {
             match self.blockchain.header_metadata(*hash) {
                 Ok(header) => self
                     .storage
@@ -168,15 +175,15 @@ where
         };
 
         match self.blockchain.header_metadata(hash) {
-            Ok(hdr) => {
-                if !self.have_state_at(&hash, hdr.number) {
+            Ok(header) => {
+                if !self.have_state_at(&hash, header.number) {
                     return Err(unknown_block_err(format!(
                         "State already discarded for {:?}",
                         block
                     )));
                 }
                 if let Ok(()) = self.storage.state_db.pin(&hash) {
-                    let root = hdr.state_root;
+                    let root = header.state_root;
                     let db_state = DbState::<Block>::new(self.storage.clone(), root);
                     Ok(RefTrackingState::new(
                         db_state,

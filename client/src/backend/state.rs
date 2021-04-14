@@ -1,10 +1,14 @@
+// Copy from sc-client-db, since `StorageDb` and `DbGenesisStorage` are not public.
+
 use std::{fmt, sync::Arc};
 
 use hash_db::Prefix;
 use kvdb::DBValue;
 use memory_db::prefixed_key;
 
+use sc_client_db::{DbHash, DbState};
 use sc_state_db::{MetaDb, NodeDb, StateDb};
+use sp_database::Database;
 use sp_runtime::traits::{Block as BlockT, HashFor};
 use sp_state_machine::{
     Backend as StateBackend, DefaultError, MemoryDB, StateMachineStats, Storage, TrieBackend,
@@ -12,13 +16,10 @@ use sp_state_machine::{
 };
 use sp_storage::ChildInfo;
 
-use crate::{columns, database::ReadOnlyDb};
-
-/// DB-backed patricia trie state, transaction type is an overlay of changes to commit.
-pub type DbState<Block> = TrieBackend<Arc<dyn Storage<HashFor<Block>>>, HashFor<Block>>;
+use crate::columns;
 
 pub struct StorageDb<Block: BlockT> {
-    pub db: Arc<dyn ReadOnlyDb>,
+    pub db: Arc<dyn Database<DbHash>>,
     pub state_db: StateDb<Block::Hash, Vec<u8>>,
     pub prefix_keys: bool,
 }
@@ -45,7 +46,7 @@ impl<Block: BlockT> NodeDb for StorageDb<Block> {
 }
 
 // wrapper that implements trait required for state_db
-pub struct StateMetaDb<'a>(pub &'a dyn ReadOnlyDb);
+pub struct StateMetaDb<'a>(pub &'a dyn Database<DbHash>);
 impl<'a> MetaDb for StateMetaDb<'a> {
     type Error = DefaultError;
 

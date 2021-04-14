@@ -4,17 +4,22 @@ use chrono::Local;
 use fern::colors::{Color, ColoredLevelConfig};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct LoggerConfig {
-    pub std: log::LevelFilter,
+    pub console: ConsoleLoggerConfig,
     pub file: Option<FileLoggerConfig>,
 }
 
-impl Default for LoggerConfig {
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ConsoleLoggerConfig {
+    #[serde(default = "default_console_log_level")]
+    pub level: log::LevelFilter,
+}
+
+impl Default for ConsoleLoggerConfig {
     fn default() -> Self {
         Self {
-            std: log::LevelFilter::Debug,
-            file: None,
+            level: log::LevelFilter::Debug,
         }
     }
 }
@@ -34,6 +39,10 @@ impl Default for FileLoggerConfig {
             path: default_file_log_path(),
         }
     }
+}
+
+fn default_console_log_level() -> log::LevelFilter {
+    log::LevelFilter::Debug
 }
 
 fn default_file_log_level() -> log::LevelFilter {
@@ -56,8 +65,8 @@ impl LoggerConfig {
             .trace(Color::Magenta);
 
         let stdout_dispatcher = fern::Dispatch::new()
-            .level(self.std)
-            .level_for("archive", self.std)
+            .level(self.console.level)
+            .level_for("archive", self.console.level)
             .level_for("sqlx", log::LevelFilter::Error)
             .level_for("frame_executive", log::LevelFilter::Error)
             .format(move |out, message, record| {

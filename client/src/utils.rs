@@ -1,6 +1,10 @@
+// Copy from sc-client-db utils and children modules, since those functions are not public
+
 use std::{convert::TryInto, hash::Hash};
 
 use codec::{Decode, Encode};
+use sc_client_db::DbHash;
+use sp_database::Database;
 use sp_runtime::{
     generic::BlockId,
     traits::{
@@ -9,10 +13,7 @@ use sp_runtime::{
     },
 };
 
-use crate::{
-    database::ReadOnlyDb,
-    error::{backend_err, BlockchainError},
-};
+use crate::error::{backend_err, BlockchainError};
 
 /// Number of columns in the db. Must be the same for both full && light dbs.
 /// Otherwise RocksDb will fail to open database && check its type.
@@ -67,7 +68,7 @@ pub type NumberIndexKey = [u8; 4];
 pub fn number_index_key<N: TryInto<u32>>(n: N) -> Result<NumberIndexKey, BlockchainError> {
     let n = n
         .try_into()
-        .map_err(|_| BlockchainError::Backend("Block number cannot be converted to u32".into()))?;
+        .map_err(|_| backend_err("Block number cannot be converted to u32"))?;
 
     Ok([
         (n >> 24) as u8,
@@ -81,7 +82,7 @@ pub fn number_index_key<N: TryInto<u32>>(n: N) -> Result<NumberIndexKey, Blockch
 /// block lookup key is the DB-key header, block and justification are stored under.
 /// looks up lookup key by hash from DB as necessary.
 pub fn block_id_to_lookup_key<Block>(
-    db: &dyn ReadOnlyDb,
+    db: &dyn Database<DbHash>,
     key_lookup_col: u32,
     id: BlockId<Block>,
 ) -> Result<Option<Vec<u8>>, BlockchainError>
@@ -97,7 +98,7 @@ where
 
 /// Read database column entry for the given block.
 pub fn read_db<Block>(
-    db: &dyn ReadOnlyDb,
+    db: &dyn Database<DbHash>,
     col_index: u32,
     col: u32,
     id: BlockId<Block>,
@@ -113,7 +114,7 @@ where
 
 /// Read a header from the database.
 pub fn read_header<Block: BlockT>(
-    db: &dyn ReadOnlyDb,
+    db: &dyn Database<DbHash>,
     col_index: u32,
     col: u32,
     id: BlockId<Block>,
@@ -121,7 +122,7 @@ pub fn read_header<Block: BlockT>(
     match read_db(db, col_index, col, id)? {
         Some(header) => match Block::Header::decode(&mut &header[..]) {
             Ok(header) => Ok(Some(header)),
-            Err(_) => Err(BlockchainError::Backend("Error decoding header".into())),
+            Err(_) => Err(backend_err("Error decoding header")),
         },
         None => Ok(None),
     }
@@ -129,15 +130,12 @@ pub fn read_header<Block: BlockT>(
 
 /// Read genesis hash from database.
 pub fn read_genesis_hash<Hash: Decode>(
-    db: &dyn ReadOnlyDb,
+    db: &dyn Database<DbHash>,
 ) -> Result<Option<Hash>, BlockchainError> {
     match db.get(COLUMN_META, meta_keys::GENESIS_HASH) {
         Some(h) => match Decode::decode(&mut &h[..]) {
             Ok(h) => Ok(Some(h)),
-            Err(err) => Err(BlockchainError::Backend(format!(
-                "Error decoding genesis hash: {}",
-                err
-            ))),
+            Err(err) => Err(backend_err(format!("Error decoding genesis hash: {}", err))),
         },
         None => Ok(None),
     }
@@ -145,7 +143,7 @@ pub fn read_genesis_hash<Hash: Decode>(
 
 /// Read meta from the database.
 pub fn read_meta<Block>(
-    db: &dyn ReadOnlyDb,
+    db: &dyn Database<DbHash>,
     col_header: u32,
 ) -> Result<Meta<<<Block as BlockT>::Header as HeaderT>::Number, Block::Hash>, BlockchainError>
 where
@@ -198,7 +196,7 @@ where
 
 /// Returns the hashes of the children blocks of the block with `parent_hash`.
 pub fn read_children<K, V>(
-    db: &dyn ReadOnlyDb,
+    db: &dyn Database<DbHash>,
     column: u32,
     prefix: &[u8],
     parent_hash: K,

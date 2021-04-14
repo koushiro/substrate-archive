@@ -1,13 +1,18 @@
 mod backend;
+mod builder;
 mod client;
+mod config;
 mod database;
 mod error;
 mod utils;
 
 pub use self::{
-    backend::{DatabaseSettings, ReadOnlyBackend},
+    backend::{BackendConfig, ReadOnlyBackend},
+    builder::{new_archive_client, ArchiveBackend, ArchiveCallExecutor, ArchiveClient},
     client::Client,
-    database::{DbHash, ReadOnlyDb, SecondaryRocksDb},
+    config::ClientConfig,
+    database::{RocksDbConfig, SecondaryRocksDb},
+    error::{ArchiveClientError, ArchiveClientResult, BlockchainError, BlockchainResult},
 };
 
 #[allow(unused)]

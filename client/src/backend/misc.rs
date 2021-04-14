@@ -14,7 +14,7 @@ use sp_state_machine::{
 };
 use sp_storage::Storage;
 
-use super::{state::RefTrackingState, BlockchainResult};
+use crate::{backend::state::RefTrackingState, error::BlockchainResult};
 
 pub struct BlockImportOperationImpl;
 impl<Block> BlockImportOperation<Block> for BlockImportOperationImpl

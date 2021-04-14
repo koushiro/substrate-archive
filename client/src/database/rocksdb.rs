@@ -2,10 +2,20 @@ use std::{collections::HashMap, fmt, io, path::PathBuf};
 
 use kvdb::{DBValue, IoStatsKind, KeyValueDB};
 use kvdb_rocksdb::{Database, DatabaseConfig};
+use serde::{Deserialize, Serialize};
 
+use sc_client_db::DbHash;
 use sp_database::{ColumnId, Database as DatabaseT, Transaction};
 
-use crate::{columns, database::DbHash, utils::NUM_COLUMNS};
+use crate::{columns, utils::NUM_COLUMNS};
+
+/// Secondary rocksdb configuration.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct RocksDbConfig {
+    path: PathBuf,
+    cache_size: usize,
+    secondary_db_path: PathBuf,
+}
 
 pub struct SecondaryRocksDb(Database);
 impl fmt::Debug for SecondaryRocksDb {
@@ -16,11 +26,13 @@ impl fmt::Debug for SecondaryRocksDb {
 }
 
 impl SecondaryRocksDb {
-    pub fn open(path: PathBuf, cache_size: usize, secondary_db_path: PathBuf) -> io::Result<Self> {
-        let path = path.to_str().expect("cannot find primary rocksdb");
-        let secondary_db_path = secondary_db_path
+    pub fn open(config: RocksDbConfig) -> io::Result<Self> {
+        let path = config.path.to_str().expect("cannot find primary rocksdb");
+        let secondary_db_path = config
+            .secondary_db_path
             .to_str()
             .expect("cannot create secondary rocksdb db");
+        let cache_size = config.cache_size;
 
         let mut db_config = DatabaseConfig::with_columns(NUM_COLUMNS);
         db_config.secondary = Some(secondary_db_path.to_string());
@@ -43,18 +55,6 @@ impl SecondaryRocksDb {
             NUM_COLUMNS,
             other_col_budget,
         );
-        // light node database
-        /*
-        let col_budget = cache_size / (NUM_COLUMNS as usize);
-        for i in 0..NUM_COLUMNS {
-            memory_budget.insert(i, col_budget);
-        }
-        log::trace!(
-            "Open RocksDB light database at {}, column cache: {} MiB",
-            path,
-            col_budget,
-        );
-        */
 
         db_config.memory_budget = memory_budget;
 
@@ -82,10 +82,9 @@ impl SecondaryRocksDb {
 }
 
 type DatabaseResult<T> = sp_database::error::Result<T>;
-
 impl DatabaseT<DbHash> for SecondaryRocksDb {
     fn commit(&self, _transaction: Transaction<DbHash>) -> DatabaseResult<()> {
-        panic!("Read Only Database")
+        panic!("Read-only database don't support commit transaction")
     }
 
     fn get(&self, col: u32, key: &[u8]) -> Option<Vec<u8>> {
