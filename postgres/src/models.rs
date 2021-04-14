@@ -23,13 +23,13 @@ pub struct BlockModel {
 
     // FIXME: The reason why we can't use composite type array
     // https://github.com/launchbadge/sqlx/issues/298 and https://github.com/launchbadge/sqlx/issues/1031
-    // pub storages: Vec<StorageChange>,
-    // pub storages: Vec<(Vec<u8>, Option<Vec<u8>>)>,
-    pub storages: JsonValue,
+    // pub changes: Vec<StorageChange>,
+    // pub changes: Vec<(Vec<u8>, Option<Vec<u8>>)>,
+    pub changes: JsonValue,
 }
 
 /*
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, FromRow)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct StorageChange {
     pub key: Vec<u8>,
     pub data: Option<Vec<u8>>,

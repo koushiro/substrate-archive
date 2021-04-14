@@ -8,18 +8,18 @@ use sqlx::{
 use crate::models::{BlockModel, MetadataModel};
 
 #[async_trait::async_trait]
-pub trait Insert: Send + Sized {
+pub trait InsertModel: Send + Sized {
     fn gen_query<'p>(self) -> Query<'p, Postgres, PgArguments>;
 
     async fn insert(self, conn: &mut PoolConnection<Postgres>) -> Result<u64, SqlxError>;
 }
 
 #[async_trait::async_trait]
-impl Insert for MetadataModel {
+impl InsertModel for MetadataModel {
     fn gen_query<'q>(self) -> Query<'q, Postgres, PgArguments> {
         sqlx::query(
             r#"
-            INSERT INTO metadata VALUES ($1, $2, $3, $4)
+            INSERT INTO metadatas VALUES ($1, $2, $3, $4)
             ON CONFLICT (spec_version)
             DO UPDATE SET (
                 spec_version,
@@ -53,7 +53,7 @@ impl Insert for MetadataModel {
 }
 
 #[async_trait::async_trait]
-impl Insert for BlockModel {
+impl InsertModel for BlockModel {
     fn gen_query<'q>(self) -> Query<'q, Postgres, PgArguments> {
         sqlx::query(
             r#"
@@ -68,7 +68,7 @@ impl Insert for BlockModel {
                 extrinsics_root,
                 digest,
                 extrinsics,
-                storages
+                changes
             ) = (
                 excluded.spec_version,
                 excluded.block_num,
@@ -78,7 +78,7 @@ impl Insert for BlockModel {
                 excluded.extrinsics_root,
                 excluded.digest,
                 excluded.extrinsics,
-                excluded.storages
+                excluded.changes
             );
             "#,
         )
@@ -90,7 +90,7 @@ impl Insert for BlockModel {
         .bind(self.extrinsics_root)
         .bind(self.digest)
         .bind(self.extrinsics)
-        .bind(self.storages)
+        .bind(self.changes)
     }
 
     async fn insert(self, conn: &mut PoolConnection<Postgres>) -> Result<u64, SqlxError> {

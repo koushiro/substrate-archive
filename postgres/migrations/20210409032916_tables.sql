@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS metadata (
+CREATE TABLE IF NOT EXISTS metadatas (
     spec_version integer NOT NULL,
 
     block_num integer NOT NULL,
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS metadata (
 -- );
 
 CREATE TABLE IF NOT EXISTS blocks (
-    spec_version integer NOT NULL REFERENCES metadata(spec_version),
+    spec_version integer NOT NULL REFERENCES metadatas(spec_version),
 
     block_num integer check (block_num >= 0 and block_num < 2147483647) NOT NULL,
     block_hash bytea NOT NULL,
@@ -30,8 +30,8 @@ CREATE TABLE IF NOT EXISTS blocks (
     digest bytea NOT NULL,
     extrinsics bytea[] NOT NULL,
 
---     storages storage_ty[],
-    storages jsonb NOT NULL,
+--     changes storage_ty[],
+    changes jsonb NOT NULL,
 
     PRIMARY KEY (block_num)
 ) PARTITION BY RANGE (block_num);

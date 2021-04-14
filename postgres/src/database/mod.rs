@@ -1,4 +1,4 @@
-pub mod insert;
+mod insert;
 pub mod query;
 
 use sqlx::{
@@ -7,6 +7,7 @@ use sqlx::{
     postgres::{PgPool, PgPoolOptions, Postgres},
 };
 
+use self::insert::InsertModel;
 use crate::config::PostgresConfig;
 
 #[derive(Clone)]
@@ -30,6 +31,12 @@ impl PostgresDb {
 
     pub async fn conn(&self) -> Result<PoolConnection<Postgres>, SqlxError> {
         self.pool.acquire().await.map_err(Into::into)
+    }
+
+    pub async fn insert(&self, model: impl InsertModel) -> Result<u64, SqlxError> {
+        let mut conn = self.conn().await?;
+        let rows_affected = model.insert(&mut conn).await?;
+        Ok(rows_affected)
     }
 
     pub fn config(&self) -> &PostgresConfig {

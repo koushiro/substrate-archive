@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use archive_kafka::{
-    BlockPayload, KafkaConfig, KafkaError, KafkaProducer, KafkaTopicConfig, MetadataPayload,
+    BlockPayloadForDemo, KafkaConfig, KafkaError, KafkaProducer, KafkaTopicConfig, MetadataPayload,
+    StorageData, StorageKey,
 };
 
 #[tokio::main]
@@ -30,10 +31,10 @@ async fn main() -> Result<(), KafkaError> {
         block_hash: "0x00".into(),
         meta: "0x0102030405".into(),
     };
-    producer.send_metadata(metadata).await?;
+    producer.send(metadata).await?;
 
     for i in 0..950 {
-        let block = BlockPayload {
+        let block = BlockPayloadForDemo {
             spec_version: 0,
             block_num: i,
             block_hash: "0x00".into(),
@@ -42,9 +43,12 @@ async fn main() -> Result<(), KafkaError> {
             extrinsics_root: "0x00".into(),
             digest: "0x00".into(),
             extrinsics: vec![],
-            storages: vec![(i.to_string(), Some(i.to_string()))],
+            changes: vec![(
+                StorageKey(vec![(i % u32::from(u8::MAX)) as u8]),
+                Some(StorageData(vec![(i % u32::from(u8::MAX)) as u8])),
+            )],
         };
-        producer.send_block(block).await?
+        producer.send(block).await?
     }
 
     Ok(())

@@ -84,7 +84,7 @@ impl LoggerConfig {
             fs::create_dir_all(
                 file.path
                     .parent()
-                    .expect("cannot get the parent path of log file"),
+                    .expect("Cannot get the parent path of log file"),
             )?;
 
             let file_dispatcher = fern::Dispatch::new()

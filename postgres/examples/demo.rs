@@ -1,8 +1,6 @@
 use std::time::Duration;
 
-use archive_postgres::{
-    migrate, BlockModel, Insert, MetadataModel, PostgresConfig, PostgresDb, SqlxError,
-};
+use archive_postgres::{migrate, BlockModel, MetadataModel, PostgresConfig, PostgresDb, SqlxError};
 
 #[tokio::main]
 async fn main() -> Result<(), SqlxError> {
@@ -20,7 +18,6 @@ async fn main() -> Result<(), SqlxError> {
     migrate(config.uri()).await?;
 
     let db = PostgresDb::new(config).await?;
-    let mut conn = db.conn().await?;
 
     let metadata = MetadataModel {
         spec_version: 0,
@@ -28,7 +25,7 @@ async fn main() -> Result<(), SqlxError> {
         block_hash: vec![0],
         meta: vec![1, 2, 3, 4, 5],
     };
-    let _ = metadata.insert(&mut conn).await?;
+    let _ = db.insert(metadata).await?;
 
     for i in 0..950 {
         let block = BlockModel {
@@ -40,9 +37,9 @@ async fn main() -> Result<(), SqlxError> {
             extrinsics_root: vec![0],
             digest: vec![0],
             extrinsics: vec![],
-            storages: serde_json::json!([["0x01", "0x1234"], ["0x02", null]]),
+            changes: serde_json::json!([["0x01", "0x1234"], ["0x02", null]]),
         };
-        let _ = block.insert(&mut conn).await?;
+        let _ = db.insert(block).await?;
     }
 
     Ok(())

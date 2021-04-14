@@ -6,9 +6,11 @@ use rdkafka::{
     producer::{FutureProducer, FutureRecord},
 };
 
+use sp_runtime::traits::Block as BlockT;
+
 use crate::{
     config::KafkaConfig,
-    payload::{BlockPayload, MetadataPayload},
+    payload::{BlockPayload, BlockPayloadForDemo, MetadataPayload},
 };
 
 #[derive(Clone)]
@@ -40,36 +42,17 @@ impl KafkaProducer {
             && !config.topic.block.is_empty()
     }
 
-    pub async fn send_metadata(&self, metadata: MetadataPayload) -> Result<(), KafkaError> {
-        log::info!(
-            "Kafka publish metadata, version = {}",
-            metadata.spec_version
-        );
-        let payload =
-            serde_json::to_string(&metadata).expect("serialize metadata payload shouldn't be fail");
-        let key = metadata.spec_version.to_string();
-        self.send(&self.config.topic.metadata, &payload, &key).await
+    pub async fn send(&self, payload: impl SendPayload) -> Result<(), KafkaError> {
+        payload.send(self).await
     }
 
-    pub async fn send_block(&self, block: BlockPayload) -> Result<(), KafkaError> {
-        log::info!(
-            "Kafka publish block, number = {}, hash = {}",
-            block.block_num,
-            block.block_hash
-        );
-        let payload =
-            serde_json::to_string(&block).expect("serialize block payload shouldn't be fail");
-        let key = block.block_num.to_string();
-        self.send(&self.config.topic.block, &payload, &key).await
-    }
-
-    async fn send(&self, topic: &str, payload: &str, key: &str) -> Result<(), KafkaError> {
+    async fn send_inner(&self, topic: &str, payload: &str, key: &str) -> Result<(), KafkaError> {
         let record = FutureRecord::to(topic).payload(payload).key(key);
         let queue_timeout = Duration::from_secs(self.config.queue_timeout);
         let delivery_status = self.producer.send(record, queue_timeout).await;
         match delivery_status {
             Ok(result) => {
-                log::debug!(
+                log::info!(
                     "topic: {}, partition: {}, offset: {}",
                     topic,
                     result.0,
@@ -86,5 +69,54 @@ impl KafkaProducer {
 
     pub fn config(&self) -> &KafkaConfig {
         &self.config
+    }
+}
+
+#[async_trait::async_trait]
+pub trait SendPayload: Send + Sized {
+    async fn send(self, producer: &KafkaProducer) -> Result<(), KafkaError>;
+}
+
+#[async_trait::async_trait]
+impl SendPayload for MetadataPayload {
+    async fn send(self, producer: &KafkaProducer) -> Result<(), KafkaError> {
+        log::info!("Kafka publish metadata, version = {}", self.spec_version);
+        let topic = &producer.config.topic.metadata;
+        let payload =
+            serde_json::to_string(&self).expect("Serialize metadata payload shouldn't be fail");
+        let key = self.spec_version.to_string();
+        producer.send_inner(&topic, &payload, &key).await
+    }
+}
+
+#[async_trait::async_trait]
+impl<B: BlockT> SendPayload for BlockPayload<B> {
+    async fn send(self, producer: &KafkaProducer) -> Result<(), KafkaError> {
+        log::info!(
+            "Kafka publish block, number = {}, hash = {}",
+            self.block_num,
+            self.block_hash
+        );
+        let topic = &producer.config.topic.block;
+        let payload =
+            serde_json::to_string(&self).expect("Serialize block payload shouldn't be fail");
+        let key = self.block_num.to_string();
+        producer.send_inner(&topic, &payload, &key).await
+    }
+}
+
+#[async_trait::async_trait]
+impl SendPayload for BlockPayloadForDemo {
+    async fn send(self, producer: &KafkaProducer) -> Result<(), KafkaError> {
+        log::info!(
+            "Kafka publish block, number = {}, hash = {}",
+            self.block_num,
+            self.block_hash
+        );
+        let topic = &producer.config.topic.block;
+        let payload =
+            serde_json::to_string(&self).expect("Serialize block payload shouldn't be fail");
+        let key = self.block_num.to_string();
+        producer.send_inner(&topic, &payload, &key).await
     }
 }

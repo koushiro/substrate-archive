@@ -27,11 +27,11 @@ impl fmt::Debug for SecondaryRocksDb {
 
 impl SecondaryRocksDb {
     pub fn open(config: RocksDbConfig) -> io::Result<Self> {
-        let path = config.path.to_str().expect("cannot find primary rocksdb");
+        let path = config.path.to_str().expect("Cannot find primary rocksdb");
         let secondary_db_path = config
             .secondary_db_path
             .to_str()
-            .expect("cannot create secondary rocksdb db");
+            .expect("Cannot create secondary rocksdb db");
         let cache_size = config.cache_size;
 
         let mut db_config = DatabaseConfig::with_columns(NUM_COLUMNS);

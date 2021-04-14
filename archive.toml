@@ -1,15 +1,21 @@
+################################
+# Archive client configuration #
+################################
 [client]
 wasm_exec_method = "Interpreted" # or "Compiled"
 default_heap_pages = 1024
 max_runtime_instances = 8
 wasm_runtime_overrides = "./wasm_runtime"
 
-# RocksDB backend for client
+# RocksDB backend configuration for archive client
 [client.rocksdb]
 path = "./rocksdb"
 cache_size = 128
 secondary_db_path = "./rocksdb_secondary"
 
+################################
+# Archive logger configuration #
+################################
 [logger]
 # Optional log level of console, default: "DEBUG"
 console = { level = "DEBUG" }
