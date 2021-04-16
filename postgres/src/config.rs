@@ -1,17 +1,15 @@
-use std::time::Duration;
+use serde::{Deserialize, Serialize};
 
-use serde::Deserialize;
-
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PostgresConfig {
     // connection options (parse for the PgConnectOptions)
     pub uri: String,
     // connection pool options
     pub min_connections: u32,
     pub max_connections: u32,
-    pub connect_timeout: Duration,
-    pub idle_timeout: Option<Duration>,
-    pub max_lifetime: Option<Duration>,
+    pub connect_timeout: u64,      // seconds
+    pub idle_timeout: Option<u64>, // seconds
+    pub max_lifetime: Option<u64>, // seconds
 }
 
 impl PostgresConfig {

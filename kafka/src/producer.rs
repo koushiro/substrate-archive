@@ -10,7 +10,7 @@ use sp_runtime::traits::Block as BlockT;
 
 use crate::{
     config::KafkaConfig,
-    payload::{BlockPayload, BlockPayloadForDemo, MetadataPayload},
+    payload::{BlockPayload, BlockPayloadForDemo, MetadataPayload, MetadataPayloadForDemo},
 };
 
 #[derive(Clone)]
@@ -31,7 +31,7 @@ impl KafkaProducer {
             client.set(k, v);
         }
         let producer = client.create::<FutureProducer>()?;
-        log::info!("Kafka configuration: {:?}", config);
+        log::info!(target: "kafka", "Kafka configuration: {:?}", config);
         Ok(Self { config, producer })
     }
 
@@ -53,15 +53,18 @@ impl KafkaProducer {
         match delivery_status {
             Ok(result) => {
                 log::info!(
+                    target: "kafka",
                     "topic: {}, partition: {}, offset: {}",
-                    topic,
-                    result.0,
-                    result.1
+                    topic, result.0, result.1
                 );
                 Ok(())
             }
             Err(err) => {
-                log::error!("topic: {}, error: {}, msg: {:?}", topic, err.0, err.1);
+                log::error!(
+                    target: "kafka",
+                    "topic: {}, error: {}, msg: {:?}",
+                    topic, err.0, err.1
+                );
                 Err(err.0)
             }
         }
@@ -78,9 +81,13 @@ pub trait SendPayload: Send + Sized {
 }
 
 #[async_trait::async_trait]
-impl SendPayload for MetadataPayload {
+impl<B: BlockT> SendPayload for MetadataPayload<B> {
     async fn send(self, producer: &KafkaProducer) -> Result<(), KafkaError> {
-        log::info!("Kafka publish metadata, version = {}", self.spec_version);
+        log::info!(
+            target: "kafka",
+            "Publish metadata to kafka, version = {}",
+            self.spec_version
+        );
         let topic = &producer.config.topic.metadata;
         let payload =
             serde_json::to_string(&self).expect("Serialize metadata payload shouldn't be fail");
@@ -93,7 +100,8 @@ impl SendPayload for MetadataPayload {
 impl<B: BlockT> SendPayload for BlockPayload<B> {
     async fn send(self, producer: &KafkaProducer) -> Result<(), KafkaError> {
         log::info!(
-            "Kafka publish block, number = {}, hash = {}",
+            target: "kafka",
+            "Publish block to kafka, number = {}, hash = {}",
             self.block_num,
             self.block_hash
         );
@@ -106,10 +114,27 @@ impl<B: BlockT> SendPayload for BlockPayload<B> {
 }
 
 #[async_trait::async_trait]
+impl SendPayload for MetadataPayloadForDemo {
+    async fn send(self, producer: &KafkaProducer) -> Result<(), KafkaError> {
+        log::info!(
+            target: "kafka",
+            "Publish metadata to kafka, version = {}",
+            self.spec_version
+        );
+        let topic = &producer.config.topic.metadata;
+        let payload =
+            serde_json::to_string(&self).expect("Serialize metadata payload shouldn't be fail");
+        let key = self.spec_version.to_string();
+        producer.send_inner(&topic, &payload, &key).await
+    }
+}
+
+#[async_trait::async_trait]
 impl SendPayload for BlockPayloadForDemo {
     async fn send(self, producer: &KafkaProducer) -> Result<(), KafkaError> {
         log::info!(
-            "Kafka publish block, number = {}, hash = {}",
+            target: "kafka",
+            "Publish block to kafka, number = {}, hash = {}",
             self.block_num,
             self.block_hash
         );

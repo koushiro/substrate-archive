@@ -7,36 +7,35 @@ use sp_runtime::{
 use sp_storage::{StorageData, StorageKey};
 
 #[derive(Clone, Debug)]
-pub struct Metadata {
+pub struct Metadata<B: BlockT> {
     pub spec_version: u32,
-    pub block_num: u32,
-    pub block_hash: Vec<u8>,
+    pub block_num: <B::Header as HeaderT>::Number,
+    pub block_hash: <B::Header as HeaderT>::Hash,
     pub meta: Vec<u8>,
 }
 
-impl xtra::Message for Metadata {
+impl<B: BlockT> xtra::Message for Metadata<B> {
     type Result = ();
 }
 
-impl From<Metadata> for archive_postgres::MetadataModel {
-    fn from(metadata: Metadata) -> Self {
+impl<B: BlockT> From<Metadata<B>> for archive_postgres::MetadataModel {
+    fn from(metadata: Metadata<B>) -> Self {
         Self {
             spec_version: metadata.spec_version,
-            block_num: metadata.block_num,
-            block_hash: metadata.block_hash,
+            block_num: metadata.block_num.saturated_into(),
+            block_hash: metadata.block_hash.as_ref().to_vec(),
             meta: metadata.meta,
         }
     }
 }
 
-#[cfg(feature = "kafka")]
-impl From<Metadata> for archive_kafka::MetadataPayload {
-    fn from(metadata: Metadata) -> Self {
+impl<B: BlockT> From<Metadata<B>> for archive_kafka::MetadataPayload<B> {
+    fn from(metadata: Metadata<B>) -> Self {
         Self {
             spec_version: metadata.spec_version,
             block_num: metadata.block_num,
-            block_hash: format!("0x{}", hex::encode(metadata.block_hash)),
-            meta: format!("0x{}", hex::encode(metadata.meta)),
+            block_hash: metadata.block_hash,
+            meta: metadata.meta,
         }
     }
 }
@@ -81,7 +80,6 @@ impl<B: BlockT> From<Block<B>> for archive_postgres::BlockModel {
     }
 }
 
-#[cfg(feature = "kafka")]
 impl<B: BlockT> From<Block<B>> for archive_kafka::BlockPayload<B> {
     fn from(block: Block<B>) -> Self {
         Self {
@@ -96,6 +94,15 @@ impl<B: BlockT> From<Block<B>> for archive_kafka::BlockPayload<B> {
             changes: block.changes,
         }
     }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct CheckIfMetadataExist {
+    pub spec_version: u32,
+}
+
+impl xtra::Message for CheckIfMetadataExist {
+    type Result = bool;
 }
 
 #[derive(Copy, Clone, Debug)]

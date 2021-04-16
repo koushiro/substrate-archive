@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use archive_kafka::{
-    BlockPayloadForDemo, KafkaConfig, KafkaError, KafkaProducer, KafkaTopicConfig, MetadataPayload,
-    StorageData, StorageKey,
+    BlockPayloadForDemo, KafkaConfig, KafkaError, KafkaProducer, KafkaTopicConfig,
+    MetadataPayloadForDemo, StorageData, StorageKey,
 };
 
 #[tokio::main]
@@ -25,7 +25,7 @@ async fn main() -> Result<(), KafkaError> {
 
     let producer = KafkaProducer::new(config)?;
 
-    let metadata = MetadataPayload {
+    let metadata = MetadataPayloadForDemo {
         spec_version: 0,
         block_num: 0,
         block_hash: "0x00".into(),

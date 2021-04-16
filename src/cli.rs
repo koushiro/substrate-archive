@@ -5,13 +5,17 @@ use serde::{Deserialize, Serialize};
 use structopt::StructOpt;
 
 use archive_client::ClientConfig;
+use archive_kafka::KafkaConfig;
+use archive_postgres::PostgresConfig;
 
 use crate::logger::LoggerConfig;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ArchiveConfig {
-    client: ClientConfig,
     logger: LoggerConfig,
+    client: ClientConfig,
+    postgres: PostgresConfig,
+    kafka: Option<KafkaConfig>,
 }
 
 #[derive(Clone, Debug, StructOpt)]

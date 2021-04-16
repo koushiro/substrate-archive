@@ -4,6 +4,6 @@ use archive::ArchiveCli;
 
 fn main() -> Result<()> {
     let config = ArchiveCli::init()?;
-    log::info!("{:?}", config);
+    log::info!("{:#?}", config);
     Ok(())
 }

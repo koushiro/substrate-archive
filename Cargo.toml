@@ -9,7 +9,8 @@ description = "Synchronize the substrate-backed chain to index all Blocks, State
 members = [
   "client",
   "kafka",
-  "postgres"
+  "postgres",
+  "actor",
 ]
 
 [patch.crates-io]
@@ -36,35 +37,27 @@ sp-storage = { git = "https://github.com/paritytech/substrate", branch = "master
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "master" }
 sp-version = { git = "https://github.com/paritytech/substrate", branch = "master" }
 sp-wasm-interface = { git = "https://github.com/paritytech/substrate", branch = "master" }
-
-[features]
-default = ["kafka"]
-kafka = ["archive-kafka"]
+#frame-executive = { git = "https://github.com/paritytech/substrate", branch = "master" }
+#frame-support = { git = "https://github.com/paritytech/substrate", branch = "master" }
+#frame-system = { git = "https://github.com/paritytech/substrate", branch = "master" }
 
 [dependencies]
 anyhow = "1.0"
-#arc-swap = "1.2"
 async-trait = "0.1"
 chrono = "0.4"
 futures = "0.3"
-hex = "0.4"
 fern = { version = "0.6", features = ["colored"] }
 flume = "0.10"
 log = { version = "0.4", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
 structopt = { version = "0.3", features = ["suggestions", "color"] }
+thiserror = "1.0"
+tokio = { version = "1.5", features = ["rt-multi-thread"] }
 toml = "0.5"
-xtra = { version = "0.5", features = ["with-tokio-1"] }
 
 codec = { package = "parity-scale-codec", version = "2.0", features = ["derive", "full"] }
-#sc-executor = { version = "0.9", features = ["wasmtime"] }
-#sp-api = "3.0"
-#sp-blockchain = "3.0"
-sp-runtime = "3.0"
-sp-storage = "3.0"
-#sp-version = "3.0"
 
 archive-client = { path = "./client" }
 archive-postgres = { path = "./postgres" }
-archive-kafka = { path = "./kafka", optional = true }
+archive-kafka = { path = "./kafka" }
+#archive-actor = { path = "./actor" }

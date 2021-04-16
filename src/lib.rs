@@ -1,4 +1,3 @@
-mod actors;
 mod archive;
 mod cli;
 mod error;

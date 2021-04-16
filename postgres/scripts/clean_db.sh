@@ -6,5 +6,5 @@ drop function if exists insert_new_block_fn;
 
 drop table if exists _sqlx_migrations;
 drop table if exists blocks;
-drop table if exists metadata;
+drop table if exists metadatas;
 "

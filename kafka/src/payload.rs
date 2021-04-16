@@ -7,11 +7,12 @@ use sp_runtime::{
 use sp_storage::{StorageData, StorageKey};
 
 #[derive(Clone, Debug, Serialize)]
-pub struct MetadataPayload {
+pub struct MetadataPayload<B: BlockT> {
     pub spec_version: u32,
-    pub block_num: u32,
-    pub block_hash: String,
-    pub meta: String,
+    pub block_num: <B::Header as HeaderT>::Number,
+    pub block_hash: <B::Header as HeaderT>::Hash,
+    #[serde(with = "serde_bytes")]
+    pub meta: Vec<u8>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -26,6 +27,15 @@ pub struct BlockPayload<B: BlockT> {
     pub extrinsics: Vec<<B as BlockT>::Extrinsic>,
 
     pub changes: Vec<(StorageKey, Option<StorageData>)>,
+}
+
+// only for example `demo`
+#[derive(Clone, Debug, Serialize)]
+pub struct MetadataPayloadForDemo {
+    pub spec_version: u32,
+    pub block_num: u32,
+    pub block_hash: String,
+    pub meta: String,
 }
 
 // only for example `demo`

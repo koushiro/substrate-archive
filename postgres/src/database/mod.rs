@@ -1,5 +1,7 @@
 mod insert;
-pub mod query;
+mod query;
+
+use std::time::Duration;
 
 use sqlx::{
     error::Error as SqlxError,
@@ -21,12 +23,21 @@ impl PostgresDb {
         let pool = PgPoolOptions::new()
             .min_connections(config.min_connections)
             .max_connections(config.max_connections)
-            .connect_timeout(config.connect_timeout)
-            .idle_timeout(config.idle_timeout)
-            .max_lifetime(config.max_lifetime)
+            .connect_timeout(Duration::from_secs(config.connect_timeout))
+            .idle_timeout(config.idle_timeout.map(Duration::from_secs))
+            .max_lifetime(config.max_lifetime.map(Duration::from_secs))
             .connect(config.uri())
             .await?;
+        log::info!(target: "postgres", "Postgres configuration: {:?}", config);
         Ok(Self { pool, config })
+    }
+
+    pub fn config(&self) -> &PostgresConfig {
+        &self.config
+    }
+
+    pub fn pool(&self) -> &PgPool {
+        &self.pool
     }
 
     pub async fn conn(&self) -> Result<PoolConnection<Postgres>, SqlxError> {
@@ -39,11 +50,15 @@ impl PostgresDb {
         Ok(rows_affected)
     }
 
-    pub fn config(&self) -> &PostgresConfig {
-        &self.config
+    pub async fn check_if_metadata_exists(&self, spec_version: u32) -> Result<bool, SqlxError> {
+        let mut conn = self.conn().await?;
+        let does_exist = query::check_if_metadata_exists(spec_version, &mut conn).await?;
+        Ok(does_exist)
     }
 
-    pub fn pool(&self) -> &PgPool {
-        &self.pool
+    pub async fn max_block_num(&self) -> Result<Option<u32>, SqlxError> {
+        let mut conn = self.conn().await?;
+        let max = query::max_block_num(&mut conn).await?;
+        Ok(max)
     }
 }

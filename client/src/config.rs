@@ -10,6 +10,20 @@ pub struct ClientConfig {
     /// Rocksdb configuration.
     pub rocksdb: RocksDbConfig,
 
+    /// Executor configuration.
+    pub executor: ExecutorConfig,
+
+    /// Should offchain workers be executed.
+    #[serde(skip)]
+    pub offchain_worker: OffchainWorkerConfig,
+    /// Directory where local WASM runtimes live. These runtimes take precedence
+    /// over on-chain runtimes when the spec version matches. Set to `None` to
+    /// disable overrides (default).
+    pub wasm_runtime_overrides: Option<PathBuf>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ExecutorConfig {
     /// Wasm execution method.
     pub wasm_exec_method: WasmExecutionMethod,
     /// The default number of 64KB pages to allocate for Wasm execution
@@ -19,15 +33,6 @@ pub struct ClientConfig {
     /// The default value is 8.
     #[serde(default = "default_max_runtime_instances")]
     pub max_runtime_instances: usize,
-
-    /// Should offchain workers be executed.
-    #[serde(default)]
-    pub offchain_worker: OffchainWorkerConfig,
-
-    /// Directory where local WASM runtimes live. These runtimes take precedence
-    /// over on-chain runtimes when the spec version matches. Set to `None` to
-    /// disable overrides (default).
-    pub wasm_runtime_overrides: Option<PathBuf>,
 }
 
 /// Specification of different methods of executing the runtime Wasm code.

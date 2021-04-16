@@ -4,13 +4,14 @@ use sc_client_api::execution_extensions::{ExecutionExtensions, ExecutionStrategi
 use sc_executor::{NativeExecutionDispatch, NativeExecutor};
 use sp_core::testing::TaskExecutor;
 use sp_runtime::traits::Block as BlockT;
+use sp_state_machine::ExecutionStrategy;
 
-use crate::error::ArchiveClientResult;
 use crate::{
     backend::{BackendConfig, ReadOnlyBackend},
     client::Client,
     config::ClientConfig,
     database::{RocksDbConfig, SecondaryRocksDb},
+    error::ArchiveClientResult,
 };
 
 /// Archive client type.
@@ -36,9 +37,9 @@ where
     let executor = ArchiveCallExecutor::new(
         backend.clone(),
         NativeExecutor::<Executor>::new(
-            config.wasm_exec_method.into(),
-            config.default_heap_pages,
-            config.max_runtime_instances,
+            config.executor.wasm_exec_method.into(),
+            config.executor.default_heap_pages,
+            config.executor.max_runtime_instances,
         ),
         Box::new(TaskExecutor::new()),
         sc_service::ClientConfig {
@@ -48,7 +49,17 @@ where
         },
     )?;
 
-    let execution_extensions = ExecutionExtensions::new(ExecutionStrategies::default(), None, None);
+    let execution_extensions = ExecutionExtensions::new(
+        ExecutionStrategies {
+            syncing: ExecutionStrategy::AlwaysWasm,
+            importing: ExecutionStrategy::AlwaysWasm,
+            block_construction: ExecutionStrategy::AlwaysWasm,
+            offchain_worker: ExecutionStrategy::AlwaysWasm,
+            other: ExecutionStrategy::AlwaysWasm,
+        },
+        None,
+        None,
+    );
 
     Ok(ArchiveClient::new(backend, executor, execution_extensions))
 }

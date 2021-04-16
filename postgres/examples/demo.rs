@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use archive_postgres::{migrate, BlockModel, MetadataModel, PostgresConfig, PostgresDb, SqlxError};
 
 #[tokio::main]
@@ -10,9 +8,9 @@ async fn main() -> Result<(), SqlxError> {
         uri: "postgres://koushiro:123@localhost:5432/archive".to_string(),
         min_connections: 1,
         max_connections: 2,
-        connect_timeout: Duration::from_secs(30),
-        idle_timeout: Some(Duration::from_secs(10 * 60)),
-        max_lifetime: Some(Duration::from_secs(30 * 60)),
+        connect_timeout: 30,
+        idle_timeout: Some(10 * 60),
+        max_lifetime: Some(30 * 60),
     };
 
     migrate(config.uri()).await?;
@@ -26,6 +24,9 @@ async fn main() -> Result<(), SqlxError> {
         meta: vec![1, 2, 3, 4, 5],
     };
     let _ = db.insert(metadata).await?;
+
+    let does_exist = db.check_if_metadata_exists(0).await?;
+    log::info!("metadata {} exists: {}", 0, does_exist);
 
     for i in 0..950 {
         let block = BlockModel {
@@ -41,6 +42,9 @@ async fn main() -> Result<(), SqlxError> {
         };
         let _ = db.insert(block).await?;
     }
+
+    let max_block_num = db.max_block_num().await?;
+    log::info!("max block num: {:?}", max_block_num);
 
     Ok(())
 }

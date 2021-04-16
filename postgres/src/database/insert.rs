@@ -42,13 +42,21 @@ impl InsertModel for MetadataModel {
 
     async fn insert(self, conn: &mut PoolConnection<Postgres>) -> Result<u64, SqlxError> {
         log::info!(
+            target: "postgres",
             "Insert metadata into postgres, version = {}",
             self.spec_version
         );
-        self.gen_query()
+        let rows_affected = self
+            .gen_query()
             .execute(conn)
             .await
-            .map(|res| res.rows_affected())
+            .map(|res| res.rows_affected())?;
+        log::info!(
+            target: "postgres",
+            "Insert metadata into postgres, affected rows = {}",
+            rows_affected
+        );
+        Ok(rows_affected)
     }
 }
 
@@ -94,10 +102,21 @@ impl InsertModel for BlockModel {
     }
 
     async fn insert(self, conn: &mut PoolConnection<Postgres>) -> Result<u64, SqlxError> {
-        log::info!("Insert block into postgres, height = {}", self.block_num);
-        self.gen_query()
+        log::info!(
+            target: "postgres",
+            "Insert block into postgres, height = {}",
+            self.block_num
+        );
+        let rows_affected = self
+            .gen_query()
             .execute(conn)
             .await
-            .map(|res| res.rows_affected())
+            .map(|res| res.rows_affected())?;
+        log::info!(
+            target: "postgres",
+            "Insert block into postgres, affected rows = {}",
+            rows_affected
+        );
+        Ok(rows_affected)
     }
 }
