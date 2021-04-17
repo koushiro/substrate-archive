@@ -43,6 +43,7 @@ async fn main() -> Result<(), KafkaError> {
             extrinsics_root: "0x00".into(),
             digest: "0x00".into(),
             extrinsics: vec![],
+            justifications: Some(([1, 2, 3, 4], vec![]).into()),
             changes: vec![(
                 StorageKey(vec![(i % u32::from(u8::MAX)) as u8]),
                 Some(StorageData(vec![(i % u32::from(u8::MAX)) as u8])),

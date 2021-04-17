@@ -3,6 +3,7 @@ use serde::Serialize;
 use sp_runtime::{
     generic::Digest,
     traits::{Block as BlockT, Header as HeaderT},
+    Justifications,
 };
 use sp_storage::{StorageData, StorageKey};
 
@@ -25,6 +26,8 @@ pub struct BlockPayload<B: BlockT> {
     pub extrinsics_root: <B::Header as HeaderT>::Hash,
     pub digest: Digest<<B::Header as HeaderT>::Hash>,
     pub extrinsics: Vec<<B as BlockT>::Extrinsic>,
+
+    pub justifications: Option<Justifications>,
 
     pub changes: Vec<(StorageKey, Option<StorageData>)>,
 }
@@ -49,6 +52,8 @@ pub struct BlockPayloadForDemo {
     pub extrinsics_root: String,
     pub digest: String,
     pub extrinsics: Vec<String>,
+
+    pub justifications: Option<Justifications>,
 
     pub changes: Vec<(StorageKey, Option<StorageData>)>,
 }

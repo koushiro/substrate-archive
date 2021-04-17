@@ -21,6 +21,8 @@ pub struct BlockModel {
     pub digest: Vec<u8>,
     pub extrinsics: Vec<Vec<u8>>,
 
+    pub justifications: Option<JsonValue>,
+
     // FIXME: The reason why we can't use composite type array
     // https://github.com/launchbadge/sqlx/issues/298 and https://github.com/launchbadge/sqlx/issues/1031
     // pub changes: Vec<StorageChange>,

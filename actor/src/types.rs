@@ -74,6 +74,10 @@ impl<B: BlockT> From<Block<B>> for archive_postgres::BlockModel {
                 .iter()
                 .map(|ext| ext.encode())
                 .collect(),
+            justifications: block.inner.justifications.map(|justifications| {
+                serde_json::to_value(justifications)
+                    .expect("Serialize justifications shouldn't be fail")
+            }),
             changes: serde_json::to_value(block.changes)
                 .expect("Serialize storage changes shouldn't be fail"),
         }
@@ -91,6 +95,7 @@ impl<B: BlockT> From<Block<B>> for archive_kafka::BlockPayload<B> {
             extrinsics_root: *block.inner.block.header().extrinsics_root(),
             digest: block.inner.block.header().digest().clone(),
             extrinsics: block.inner.block.extrinsics().to_vec(),
+            justifications: block.inner.justifications,
             changes: block.changes,
         }
     }

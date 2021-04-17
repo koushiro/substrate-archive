@@ -8,4 +8,5 @@ pub use self::{
     producer::KafkaProducer,
 };
 pub use rdkafka::error::KafkaError;
+pub use sp_runtime::{Justification, Justifications};
 pub use sp_storage::{StorageData, StorageKey};

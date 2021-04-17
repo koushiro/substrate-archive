@@ -16,7 +16,6 @@ use archive_client::ArchiveClient;
 use crate::{config::ActorConfig, error::ActorError, types::*};
 
 /// The direction of data flow:
-
 ///                                                     ┌───────┐
 ///     ┌───────────────────────────────┐         ┌────►│ kafka │
 ///     │                               │         │     └───────┘
