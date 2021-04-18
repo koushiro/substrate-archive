@@ -1,11 +1,14 @@
-use serde::{Deserialize, Serialize};
-
 use archive_kafka::KafkaConfig;
 use archive_postgres::PostgresConfig;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct ActorConfig {
     pub postgres: PostgresConfig,
-    // dispatcher
+    pub dispatcher: ActorDispatcherConfig,
+}
+
+#[derive(Clone, Debug)]
+pub struct ActorDispatcherConfig {
     pub kafka: Option<KafkaConfig>,
+    // others
 }

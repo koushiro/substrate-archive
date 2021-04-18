@@ -1,5 +1,5 @@
 mod insert;
-mod query;
+pub mod query;
 
 use std::time::Duration;
 

@@ -89,6 +89,7 @@ impl<B: BlockT> Handler<Block<B>> for MetadataActor<B> {
 #[async_trait::async_trait]
 impl<B: BlockT> Handler<Die> for MetadataActor<B> {
     async fn handle(&mut self, _message: Die, ctx: &mut Context<Self>) -> <Die as Message>::Result {
+        log::info!("Stopping Metadata Actor");
         ctx.stop();
     }
 }

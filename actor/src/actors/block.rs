@@ -29,6 +29,7 @@ impl<B: BlockT> Actor for BlockActor<B> {
 #[async_trait::async_trait]
 impl<B: BlockT> Handler<Die> for BlockActor<B> {
     async fn handle(&mut self, _message: Die, ctx: &mut Context<Self>) -> <Die as Message>::Result {
+        log::info!("Stopping Block Actor");
         ctx.stop();
     }
 }

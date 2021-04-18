@@ -7,8 +7,6 @@ use std::sync::Arc;
 
 use xtra::{prelude::*, spawn::TokioGlobalSpawnExt, Disconnected};
 
-// use sc_executor::NativeExecutionDispatch;
-// use sp_api::{Metadata as MetadataApi, ProvideRuntimeApi};
 use sp_runtime::traits::Block as BlockT;
 
 use archive_client::ArchiveClient;
@@ -36,15 +34,26 @@ impl<Block: BlockT> Actors<Block>
 where
     Block: BlockT,
 {
+    async fn spawn_db(
+        config: ActorConfig,
+    ) -> Result<Address<postgres::PostgresActor<Block>>, ActorError> {
+        let mut dispatcher = dispatch::DispatcherActor::new();
+        if let Some(config) = config.dispatcher.kafka {
+            dispatcher = dispatcher.add("kafka", dispatch::kafka::KafkaActor::new(config)?);
+        }
+        let dispatcher = dispatcher.create(None).spawn_global();
+        let db = postgres::PostgresActor::new(config.postgres, dispatcher)
+            .await?
+            .create(None)
+            .spawn_global();
+        Ok(db)
+    }
+
     pub async fn spawn<Executor, RA>(
         _client: Arc<ArchiveClient<Block, Executor, RA>>,
         config: ActorConfig,
     ) -> Result<Self, ActorError> {
-        let db = postgres::PostgresActor::new(config.postgres)
-            .await?
-            .create(None)
-            .spawn_global();
-        // let meta = Arc::new(client.runtime_api());
+        let db = Self::spawn_db(config).await?;
         let metadata = metadata::MetadataActor::new(db.clone())
             .create(None)
             .spawn_global();

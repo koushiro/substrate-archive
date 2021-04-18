@@ -10,7 +10,7 @@ struct DoesExist {
     exists: Option<bool>,
 }
 
-pub(crate) async fn check_if_metadata_exists(
+pub async fn check_if_metadata_exists(
     spec_version: u32,
     conn: &mut PoolConnection<Postgres>,
 ) -> Result<bool, SqlxError> {
@@ -31,9 +31,7 @@ struct Max {
     max: Option<i32>,
 }
 
-pub(crate) async fn max_block_num(
-    conn: &mut PoolConnection<Postgres>,
-) -> Result<Option<u32>, SqlxError> {
+pub async fn max_block_num(conn: &mut PoolConnection<Postgres>) -> Result<Option<u32>, SqlxError> {
     let max: Max = sqlx::query_as(r#"SELECT MAX(block_num) FROM blocks"#)
         .fetch_one(conn)
         .await?;
