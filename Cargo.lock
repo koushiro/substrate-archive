@@ -178,7 +178,9 @@ dependencies = [
 name = "archive-client"
 version = "0.1.0"
 dependencies = [
+ "env_logger 0.8.3",
  "hash-db",
+ "hex",
  "kvdb",
  "kvdb-rocksdb",
  "log",
@@ -189,6 +191,7 @@ dependencies = [
  "sc-client-api",
  "sc-client-db",
  "sc-executor",
+ "sc-executor-common",
  "sc-service",
  "sc-state-db",
  "serde",
@@ -197,11 +200,15 @@ dependencies = [
  "sp-consensus",
  "sp-core",
  "sp-database",
+ "sp-externalities",
+ "sp-io",
  "sp-runtime",
+ "sp-runtime-interface",
  "sp-state-machine",
  "sp-storage",
  "sp-trie",
  "sp-version",
+ "sp-wasm-interface",
  "thiserror",
 ]
 

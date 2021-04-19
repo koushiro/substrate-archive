@@ -92,47 +92,6 @@ where
         self.backend.state_at(block)
     }
 
-    /// Get block status
-    pub fn block_status(&self, id: BlockId<Block>) -> BlockchainResult<BlockStatus> {
-        let hash_and_number = match id {
-            BlockId::Hash(hash) => self
-                .backend
-                .blockchain()
-                .number(hash)?
-                .map(|number| (hash, number)),
-            BlockId::Number(number) => self
-                .backend
-                .blockchain()
-                .hash(number)?
-                .map(|hash| (hash, number)),
-        };
-        match hash_and_number {
-            Some((hash, number)) => {
-                if self.backend.have_state_at(&hash, number) {
-                    Ok(BlockStatus::InChainWithState)
-                } else {
-                    Ok(BlockStatus::InChainPruned)
-                }
-            }
-            None => Ok(BlockStatus::Unknown),
-        }
-    }
-
-    /// Get block header by id.
-    pub fn header(&self, id: BlockId<Block>) -> BlockchainResult<Option<Block::Header>> {
-        self.backend.blockchain().header(id)
-    }
-
-    /// Get block body by id.
-    pub fn body(&self, id: BlockId<Block>) -> BlockchainResult<Option<Vec<Block::Extrinsic>>> {
-        self.backend.blockchain().body(id)
-    }
-
-    /// Get block justifications by id.
-    pub fn justifications(&self, id: BlockId<Block>) -> BlockchainResult<Option<Justifications>> {
-        self.backend.blockchain().justifications(id)
-    }
-
     /// Returns changes trie storage and all configurations that have been active in the range [first; last].
     ///
     /// Configurations are returned in descending order (and obviously never overlap).
@@ -275,15 +234,15 @@ where
     Block: BlockT,
 {
     fn block_body(&self, id: &BlockId<Block>) -> BlockchainResult<Option<Vec<Block::Extrinsic>>> {
-        self.body(*id)
+        self.backend.blockchain().body(*id)
     }
 
     fn block(&self, id: &BlockId<Block>) -> BlockchainResult<Option<SignedBlock<Block>>> {
         Ok(
             match (
-                self.header(*id)?,
-                self.body(*id)?,
-                self.justifications(*id)?,
+                self.backend.blockchain().header(*id)?,
+                self.backend.blockchain().body(*id)?,
+                self.backend.blockchain().justifications(*id)?,
             ) {
                 (Some(header), Some(extrinsics), justifications) => Some(SignedBlock {
                     block: Block::new(header, extrinsics),
@@ -295,11 +254,32 @@ where
     }
 
     fn block_status(&self, id: &BlockId<Block>) -> BlockchainResult<BlockStatus> {
-        self.block_status(*id)
+        let hash_and_number = match *id {
+            BlockId::Hash(hash) => self
+                .backend
+                .blockchain()
+                .number(hash)?
+                .map(|number| (hash, number)),
+            BlockId::Number(number) => self
+                .backend
+                .blockchain()
+                .hash(number)?
+                .map(|hash| (hash, number)),
+        };
+        match hash_and_number {
+            Some((hash, number)) => {
+                if self.backend.have_state_at(&hash, number) {
+                    Ok(BlockStatus::InChainWithState)
+                } else {
+                    Ok(BlockStatus::InChainPruned)
+                }
+            }
+            None => Ok(BlockStatus::Unknown),
+        }
     }
 
     fn justifications(&self, id: &BlockId<Block>) -> BlockchainResult<Option<Justifications>> {
-        self.justifications(*id)
+        self.backend.blockchain().justifications(*id)
     }
 
     fn block_hash(&self, number: NumberFor<Block>) -> BlockchainResult<Option<<Block>::Hash>> {
