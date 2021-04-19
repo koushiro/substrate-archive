@@ -23,7 +23,9 @@ CREATE TABLE IF NOT EXISTS blocks (
     digest bytea NOT NULL,
     extrinsics bytea[] NOT NULL,
 
-    storages jsonb NOT NULL,
+    justifications jsonb,
+
+    changes jsonb NOT NULL,
 
     PRIMARY KEY (block_num)
 ) PARTITION BY RANGE (block_num);

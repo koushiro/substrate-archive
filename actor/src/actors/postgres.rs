@@ -1,6 +1,6 @@
-use xtra::prelude::*;
-
 use std::{mem, time::Duration};
+
+use xtra::prelude::*;
 
 use sp_runtime::traits::Block as BlockT;
 
@@ -9,7 +9,7 @@ use archive_postgres::{query, BlockModel, MetadataModel, PostgresConfig, Postgre
 use crate::{
     actors::dispatch::DispatcherActor,
     error::ActorError,
-    types::{Block, CheckIfMetadataExist, Die, Metadata},
+    types::{Block, CheckIfMetadataExist, Die, MaxBlock, Metadata},
 };
 
 pub struct PostgresActor<B: BlockT> {
@@ -87,6 +87,23 @@ impl<B: BlockT> Handler<CheckIfMetadataExist> for PostgresActor<B> {
             Err(err) => {
                 log::error!("{}", err);
                 false
+            }
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl<B: BlockT> Handler<MaxBlock> for PostgresActor<B> {
+    async fn handle(
+        &mut self,
+        _: MaxBlock,
+        _: &mut Context<Self>,
+    ) -> <MaxBlock as Message>::Result {
+        match self.db.max_block_num().await {
+            Ok(num) => num,
+            Err(err) => {
+                log::error!("{}", err);
+                None
             }
         }
     }

@@ -29,7 +29,7 @@ impl<B: BlockT> Handler<Metadata<B>> for KafkaActor<B> {
     async fn handle(
         &mut self,
         message: Metadata<B>,
-        _ctx: &mut Context<Self>,
+        _: &mut Context<Self>,
     ) -> <Metadata<B> as Message>::Result {
         let payload = MetadataPayload::from(message);
         if let Err(err) = self.producer.send(payload).await {
@@ -43,7 +43,7 @@ impl<B: BlockT> Handler<Block<B>> for KafkaActor<B> {
     async fn handle(
         &mut self,
         message: Block<B>,
-        _ctx: &mut Context<Self>,
+        _: &mut Context<Self>,
     ) -> <Block<B> as Message>::Result {
         let payload = BlockPayload::from(message);
         if let Err(err) = self.producer.send(payload).await {

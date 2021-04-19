@@ -111,6 +111,27 @@ impl xtra::Message for CheckIfMetadataExist {
 }
 
 #[derive(Copy, Clone, Debug)]
+pub struct MaxBlock;
+
+impl xtra::Message for MaxBlock {
+    type Result = Option<u32>;
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct ReIndex;
+
+impl xtra::Message for ReIndex {
+    type Result = ();
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct Crawl;
+
+impl xtra::Message for Crawl {
+    type Result = ();
+}
+
+#[derive(Copy, Clone, Debug)]
 pub struct Die;
 
 impl xtra::Message for Die {

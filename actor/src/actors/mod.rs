@@ -30,10 +30,7 @@ pub struct Actors<Block: BlockT> {
     block: Address<block::BlockActor<Block>>,
 }
 
-impl<Block: BlockT> Actors<Block>
-where
-    Block: BlockT,
-{
+impl<Block: BlockT> Actors<Block> {
     async fn spawn_db(
         config: ActorConfig,
     ) -> Result<Address<postgres::PostgresActor<Block>>, ActorError> {

@@ -78,7 +78,7 @@ impl<B: BlockT> Handler<Block<B>> for MetadataActor<B> {
     async fn handle(
         &mut self,
         message: Block<B>,
-        _ctx: &mut Context<Self>,
+        _: &mut Context<Self>,
     ) -> <Block<B> as Message>::Result {
         if let Err(err) = self.block_handler(message).await {
             log::error!("{}", err);
@@ -88,7 +88,7 @@ impl<B: BlockT> Handler<Block<B>> for MetadataActor<B> {
 
 #[async_trait::async_trait]
 impl<B: BlockT> Handler<Die> for MetadataActor<B> {
-    async fn handle(&mut self, _message: Die, ctx: &mut Context<Self>) -> <Die as Message>::Result {
+    async fn handle(&mut self, _: Die, ctx: &mut Context<Self>) -> <Die as Message>::Result {
         log::info!("Stopping Metadata Actor");
         ctx.stop();
     }
