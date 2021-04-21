@@ -7,16 +7,12 @@ use sp_runtime::traits::Block as BlockT;
 use sp_state_machine::ExecutionStrategy;
 
 use crate::{
-    backend::{BackendConfig, ReadOnlyBackend},
+    backend::ReadOnlyBackend,
     client::Client,
     config::ClientConfig,
     database::{RocksDbConfig, SecondaryRocksDb},
     error::{BlockchainError, BlockchainResult},
 };
-
-/// Archive client type.
-pub type ArchiveClient<Block, Executor, RA> =
-    Client<ArchiveBackend<Block>, ArchiveCallExecutor<Block, Executor>, Block, RA>;
 
 /// Archive client backend type.
 pub type ArchiveBackend<Block> = ReadOnlyBackend<Block>;
@@ -25,15 +21,31 @@ pub type ArchiveBackend<Block> = ReadOnlyBackend<Block>;
 pub type ArchiveCallExecutor<Block, Executor> =
     sc_service::LocalCallExecutor<ReadOnlyBackend<Block>, NativeExecutor<Executor>>;
 
+/// Archive client type.
+pub type ArchiveClient<Block, Executor, RA> =
+    Client<Block, ArchiveBackend<Block>, ArchiveCallExecutor<Block, Executor>, RA>;
+
+pub fn new_secondary_rocksdb_backend<Block>(
+    rocksdb: RocksDbConfig,
+) -> BlockchainResult<ArchiveBackend<Block>>
+where
+    Block: BlockT,
+{
+    let db =
+        SecondaryRocksDb::open(rocksdb).map_err(|err| BlockchainError::Backend(err.to_string()))?;
+    let db = Arc::new(db);
+    let backend = ReadOnlyBackend::new(db, Default::default())?;
+    Ok(backend)
+}
+
 pub fn new_archive_client<Block, Executor, RA>(
+    backend: Arc<ArchiveBackend<Block>>,
     config: ClientConfig,
 ) -> BlockchainResult<ArchiveClient<Block, Executor, RA>>
 where
     Block: BlockT,
     Executor: NativeExecutionDispatch + 'static,
 {
-    let backend = new_secondary_rocksdb_backend(config.rocksdb, Default::default())?;
-
     let executor = ArchiveCallExecutor::new(
         backend.clone(),
         NativeExecutor::<Executor>::new(
@@ -62,18 +74,4 @@ where
     );
 
     Ok(ArchiveClient::new(backend, executor, execution_extensions))
-}
-
-fn new_secondary_rocksdb_backend<Block>(
-    rocksdb: RocksDbConfig,
-    backend: BackendConfig,
-) -> BlockchainResult<Arc<ReadOnlyBackend<Block>>>
-where
-    Block: BlockT,
-{
-    let db =
-        SecondaryRocksDb::open(rocksdb).map_err(|err| BlockchainError::Backend(err.to_string()))?;
-    let db = Arc::new(db);
-    let backend = Arc::new(ReadOnlyBackend::new(db, backend)?);
-    Ok(backend)
 }

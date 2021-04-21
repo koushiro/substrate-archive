@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use sc_client_api::backend::{Backend, StateBackendFor};
-use sp_api::{ApiExt, BlockId, Core as CoreApi, ProvideRuntimeApi};
+use sp_api::{ApiExt, ApiRef, BlockId, Core as CoreApi};
 use sp_runtime::traits::{Block as BlockT, Header as HeaderT};
 use sp_storage::{StorageData, StorageKey};
 
@@ -22,34 +22,39 @@ pub struct StorageChanges {
     pub child_storage_changes: ChildStorageCollection,
 }
 
-pub struct BlockExecutor<Block, B>
+pub struct BlockExecutor<'a, Block, B, Api>
 where
     Block: BlockT,
 {
-    backend: Arc<B>,
     id: BlockId<Block>,
     block: Block,
+    backend: &'a Arc<B>,
+    api: ApiRef<'a, Api>,
 }
 
-impl<Block, B> BlockExecutor<Block, B>
+impl<'a, Block, B, Api> BlockExecutor<'a, Block, B, Api>
 where
     Block: BlockT,
-    B: Backend<Block> + ProvideRuntimeApi<Block>,
-    <B as ProvideRuntimeApi<Block>>::Api:
-        CoreApi<Block> + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
+    B: Backend<Block>,
+    Api: CoreApi<Block> + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
 {
-    pub fn new(backend: Arc<B>, block: Block) -> Self {
+    pub fn new(block: Block, backend: &'a Arc<B>, api: ApiRef<'a, Api>) -> Self {
         let parent_hash = block.header().parent_hash();
         let id = BlockId::Hash(*parent_hash);
-        Self { backend, id, block }
+        Self {
+            id,
+            block,
+            backend,
+            api,
+        }
     }
 
     pub fn into_storage_changes(self) -> Result<StorageChanges, BlockchainError> {
         let parent_hash = *self.block.header().parent_hash();
         let state = self.backend.state_at(self.id)?;
-        let api = self.backend.runtime_api();
-        api.execute_block(&self.id, self.block)?;
-        let storage_changes = api
+        self.api.execute_block(&self.id, self.block)?;
+        let storage_changes = self
+            .api
             .into_storage_changes(&state, None, parent_hash)
             .map_err(BlockchainError::StorageChanges)?;
         Ok(StorageChanges {

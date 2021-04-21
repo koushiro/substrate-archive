@@ -136,13 +136,21 @@ dependencies = [
  "anyhow",
  "archive-actor",
  "archive-client",
- "async-trait",
+ "archive-postgres",
  "chrono",
+ "fdlimit",
  "fern",
+ "flume",
  "futures 0.3.13",
+ "jod-thread",
  "log",
  "parity-scale-codec",
+ "sc-client-api",
+ "sc-executor",
  "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
  "structopt",
  "thiserror",
  "tokio 1.5.0",
@@ -156,8 +164,6 @@ dependencies = [
  "archive-kafka",
  "archive-postgres",
  "async-trait",
- "flume",
- "jod-thread",
  "log",
  "parity-scale-codec",
  "sc-client-api",
@@ -1604,6 +1610,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca5faf057445ce5c9d4329e382b2ce7ca38550ef3b73a5348362d5f24e0c7fe3"
 dependencies = [
  "instant",
+]
+
+[[package]]
+name = "fdlimit"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c4c9e43643f5a3be4ca5b67d26b98031ff9db6806c3440ae32e02e3ceac3f1b"
+dependencies = [
+ "libc",
 ]
 
 [[package]]

@@ -4,8 +4,6 @@ pub use sp_blockchain::Error as BlockchainError;
 pub enum ActorError {
     #[error("{0}")]
     Blockchain(#[from] sp_blockchain::Error),
-    #[error("{0}")]
-    FlumeSend(#[from] flume::SendError<()>),
 
     #[error("{0}")]
     Join(#[from] tokio::task::JoinError),

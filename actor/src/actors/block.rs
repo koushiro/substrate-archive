@@ -6,7 +6,7 @@ use sc_client_api::{
     backend::{Backend, StateBackendFor},
     client::BlockBackend,
 };
-use sp_api::{ApiExt, BlockId, Core as CoreApi, Metadata as MetadataApi, ProvideRuntimeApi};
+use sp_api::{ApiExt, BlockId, Core as CoreApi, ProvideRuntimeApi};
 use sp_runtime::traits::{Block as BlockT, Header as HeaderT, NumberFor};
 
 use crate::{
@@ -16,32 +16,34 @@ use crate::{
     messages::{BlockMessage, Crawl, Die, MaxBlock, ReIndex},
 };
 
-pub struct BlockActor<Block, B>
+pub struct BlockActor<Block, B, Api>
 where
     Block: BlockT,
-    B: Send + Sync + 'static,
 {
     backend: Arc<B>,
-    metadata: Address<MetadataActor<Block, B>>,
+    api: Arc<Api>,
+    metadata: Address<MetadataActor<Block>>,
     db: Address<PostgresActor<Block>>,
     curr_block: u32,
 }
 
-impl<Block, B> BlockActor<Block, B>
+impl<Block, B, Api> BlockActor<Block, B, Api>
 where
     Block: BlockT,
-    B: Backend<Block> + BlockBackend<Block> + ProvideRuntimeApi<Block> + Send + Sync + 'static,
-    <B as ProvideRuntimeApi<Block>>::Api: CoreApi<Block>
-        + MetadataApi<Block>
-        + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
+    B: Backend<Block> + BlockBackend<Block>,
+    Api: ProvideRuntimeApi<Block>,
+    <Api as ProvideRuntimeApi<Block>>::Api:
+        CoreApi<Block> + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
 {
     pub fn new(
         backend: Arc<B>,
-        metadata: Address<MetadataActor<Block, B>>,
+        api: Arc<Api>,
+        metadata: Address<MetadataActor<Block>>,
         db: Address<PostgresActor<Block>>,
     ) -> Self {
         Self {
             backend,
+            api,
             metadata,
             db,
             curr_block: 0,
@@ -53,7 +55,7 @@ where
         NumberFor<Block>: From<u32>,
     {
         let id = BlockId::Number(0u32.into());
-        let runtime_version = self.backend.runtime_api().version(&id)?;
+        let runtime_version = self.api.runtime_api().version(&id)?;
         let block = self
             .backend
             .block(&id)?
@@ -79,7 +81,7 @@ where
         Ok(())
     }
 
-    async fn crawl(&self) -> Result<Option<BlockMessage<Block>>, ActorError> {
+    async fn crawl(&self) -> Result<(), ActorError> {
         let id = BlockId::Number(self.curr_block.into());
         if let Some(block) = self.backend.block(&id)? {
             log::info!(
@@ -87,29 +89,33 @@ where
                 block.block.header().number(),
                 block.block.header().hash()
             );
-            let runtime_version = self.backend.runtime_api().version(&id)?;
-            let executor = BlockExecutor::new(self.backend.clone(), block.block.clone());
-            let changes =
-                tokio::task::spawn_blocking(move || executor.into_storage_changes()).await??;
-            Ok(Some(BlockMessage {
+            let api = self.api.runtime_api();
+            let runtime_version = api.version(&id)?;
+            let executor = BlockExecutor::new(block.block.clone(), &self.backend, api);
+            let changes = executor.into_storage_changes()?;
+
+            let message = BlockMessage {
                 spec_version: runtime_version.spec_version,
                 inner: block,
                 changes: changes.main_storage_changes,
-            }))
+            };
+            self.metadata.send(message).await?;
+            Ok(())
         } else {
-            Ok(None)
+            tokio::time::sleep(Duration::from_secs(1)).await;
+            Ok(())
         }
     }
 }
 
 #[async_trait::async_trait]
-impl<Block, B> Actor for BlockActor<Block, B>
+impl<Block, B, Api> Actor for BlockActor<Block, B, Api>
 where
     Block: BlockT,
-    B: Backend<Block> + BlockBackend<Block> + ProvideRuntimeApi<Block> + Send + Sync + 'static,
-    <B as ProvideRuntimeApi<Block>>::Api: CoreApi<Block>
-        + MetadataApi<Block>
-        + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
+    B: Backend<Block> + BlockBackend<Block> + 'static,
+    Api: ProvideRuntimeApi<Block> + Send + Sync + 'static,
+    <Api as ProvideRuntimeApi<Block>>::Api:
+        CoreApi<Block> + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
 {
     async fn started(&mut self, ctx: &mut Context<Self>) {
         // using this instead of notify_immediately because
@@ -129,13 +135,13 @@ where
 }
 
 #[async_trait::async_trait]
-impl<Block, B> Handler<ReIndex> for BlockActor<Block, B>
+impl<Block, B, Api> Handler<ReIndex> for BlockActor<Block, B, Api>
 where
     Block: BlockT,
-    B: Backend<Block> + BlockBackend<Block> + ProvideRuntimeApi<Block> + Send + Sync + 'static,
-    <B as ProvideRuntimeApi<Block>>::Api: CoreApi<Block>
-        + MetadataApi<Block>
-        + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
+    B: Backend<Block> + BlockBackend<Block> + 'static,
+    Api: ProvideRuntimeApi<Block> + Send + Sync + 'static,
+    <Api as ProvideRuntimeApi<Block>>::Api:
+        CoreApi<Block> + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
 {
     async fn handle(
         &mut self,
@@ -151,35 +157,32 @@ where
 }
 
 #[async_trait::async_trait]
-impl<Block, B> Handler<Crawl> for BlockActor<Block, B>
+impl<Block, B, Api> Handler<Crawl> for BlockActor<Block, B, Api>
 where
     Block: BlockT,
-    B: Backend<Block> + BlockBackend<Block> + ProvideRuntimeApi<Block> + Send + Sync + 'static,
-    <B as ProvideRuntimeApi<Block>>::Api: CoreApi<Block>
-        + MetadataApi<Block>
-        + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
+    B: Backend<Block> + BlockBackend<Block> + 'static,
+    Api: ProvideRuntimeApi<Block> + Send + Sync + 'static,
+    <Api as ProvideRuntimeApi<Block>>::Api:
+        CoreApi<Block> + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
 {
     async fn handle(&mut self, _: Crawl, ctx: &mut Context<Self>) -> <Crawl as Message>::Result {
         match self.crawl().await {
-            Ok(Some(block)) => {
-                if self.metadata.send(block).await.is_err() {
-                    ctx.stop();
-                }
-            }
-            Ok(None) => tokio::time::sleep(Duration::from_secs(1)).await,
+            Ok(()) => {}
+            Err(ActorError::Disconnect(_)) => ctx.stop(),
             Err(err) => log::error!("{}", err),
         }
     }
 }
 
 #[async_trait::async_trait]
-impl<Block, B> Handler<Die> for BlockActor<Block, B>
+impl<Block, B, Api> Handler<Die> for BlockActor<Block, B, Api>
 where
     Block: BlockT,
-    B: Backend<Block> + BlockBackend<Block> + ProvideRuntimeApi<Block> + Send + Sync + 'static,
-    <B as ProvideRuntimeApi<Block>>::Api: CoreApi<Block>
-        + MetadataApi<Block>
-        + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
+    Api: Send + Sync,
+    B: Backend<Block> + BlockBackend<Block> + 'static,
+    Api: ProvideRuntimeApi<Block> + Send + Sync + 'static,
+    <Api as ProvideRuntimeApi<Block>>::Api:
+        CoreApi<Block> + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
 {
     async fn handle(&mut self, _: Die, ctx: &mut Context<Self>) -> <Die as Message>::Result {
         log::info!("Stopping Block Actor");

@@ -2,8 +2,8 @@ use xtra::prelude::*;
 
 use std::sync::Arc;
 
-use sp_api::{BlockId, Metadata as MetadataApi, ProvideRuntimeApi};
-use sp_core::Bytes;
+use sp_api::{ApiError, BlockId, Metadata as MetadataApi, ProvideRuntimeApi};
+use sp_core::{Bytes, OpaqueMetadata};
 use sp_runtime::traits::{Block as BlockT, Header as HeaderT};
 
 use crate::{
@@ -12,23 +12,36 @@ use crate::{
     messages::{BlockMessage, CheckIfMetadataExist, Die, MetadataMessage},
 };
 
-pub struct MetadataActor<Block: BlockT, B> {
-    backend: Arc<B>,
+pub trait GetMetadata<Block: BlockT>: Send + Sync {
+    fn metadata(&self, id: &BlockId<Block>) -> Result<OpaqueMetadata, ApiError>;
+}
+
+impl<Block, Api> GetMetadata<Block> for Api
+where
+    Block: BlockT,
+    Api: ProvideRuntimeApi<Block> + Send + Sync,
+    <Api as ProvideRuntimeApi<Block>>::Api: MetadataApi<Block>,
+{
+    fn metadata(&self, id: &BlockId<Block>) -> Result<OpaqueMetadata, ApiError> {
+        self.runtime_api().metadata(id)
+    }
+}
+
+pub struct MetadataActor<Block: BlockT> {
+    api: Arc<dyn GetMetadata<Block>>,
     db: Address<PostgresActor<Block>>,
 }
 
-impl<Block, B> MetadataActor<Block, B>
+impl<Block> MetadataActor<Block>
 where
     Block: BlockT,
-    B: ProvideRuntimeApi<Block> + Send + Sync + 'static,
-    <B as ProvideRuntimeApi<Block>>::Api: MetadataApi<Block>,
 {
-    pub fn new(backend: Arc<B>, db: Address<PostgresActor<Block>>) -> Self {
-        Self { backend, db }
+    pub fn new(api: Arc<dyn GetMetadata<Block>>, db: Address<PostgresActor<Block>>) -> Self {
+        Self { api, db }
     }
 
     async fn meta_checker(
-        &mut self,
+        &self,
         spec_version: u32,
         block_num: <Block::Header as HeaderT>::Number,
         block_hash: Block::Hash,
@@ -41,10 +54,9 @@ where
                 block_num,
                 block_hash
             );
-            let backend = self.backend.clone();
+            let api = self.api.clone();
             let id = BlockId::Hash(block_hash);
-            let meta =
-                tokio::task::spawn_blocking(move || backend.runtime_api().metadata(&id)).await??;
+            let meta = tokio::task::spawn_blocking(move || api.metadata(&id)).await??;
             let metadata = MetadataMessage {
                 spec_version,
                 block_num,
@@ -56,7 +68,7 @@ where
         Ok(())
     }
 
-    async fn block_handler(&mut self, message: BlockMessage<Block>) -> Result<(), ActorError> {
+    async fn block_handler(&self, message: BlockMessage<Block>) -> Result<(), ActorError> {
         self.meta_checker(
             message.spec_version,
             *message.inner.block.header().number(),
@@ -69,19 +81,12 @@ where
 }
 
 #[async_trait::async_trait]
-impl<Block, B> Actor for MetadataActor<Block, B>
-where
-    Block: BlockT,
-    B: Send + Sync + 'static,
-{
-}
+impl<Block> Actor for MetadataActor<Block> where Block: BlockT {}
 
 #[async_trait::async_trait]
-impl<Block, B> Handler<BlockMessage<Block>> for MetadataActor<Block, B>
+impl<Block> Handler<BlockMessage<Block>> for MetadataActor<Block>
 where
     Block: BlockT,
-    B: ProvideRuntimeApi<Block> + Send + Sync + 'static,
-    <B as ProvideRuntimeApi<Block>>::Api: MetadataApi<Block>,
 {
     async fn handle(
         &mut self,
@@ -95,10 +100,9 @@ where
 }
 
 #[async_trait::async_trait]
-impl<Block, B> Handler<Die> for MetadataActor<Block, B>
+impl<Block> Handler<Die> for MetadataActor<Block>
 where
     Block: BlockT,
-    B: Send + Sync + 'static,
 {
     async fn handle(&mut self, _: Die, ctx: &mut Context<Self>) -> <Die as Message>::Result {
         log::info!("Stopping Metadata Actor");

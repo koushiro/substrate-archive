@@ -8,7 +8,10 @@ mod utils;
 
 pub use self::{
     backend::{BackendConfig, ReadOnlyBackend},
-    builder::{new_archive_client, ArchiveBackend, ArchiveCallExecutor, ArchiveClient},
+    builder::{
+        new_archive_client, new_secondary_rocksdb_backend, ArchiveBackend, ArchiveCallExecutor,
+        ArchiveClient,
+    },
     client::Client,
     config::ClientConfig,
     database::{RocksDbConfig, SecondaryRocksDb},
@@ -32,4 +35,35 @@ pub(crate) mod columns {
     pub const CACHE: u32 = 10;
     /// Transactions
     pub const TRANSACTION: u32 = 11;
+}
+
+use sc_client_api::backend::{Backend as BackendT, StateBackendFor};
+use sp_api::{CallApiAt, ConstructRuntimeApi, ProvideRuntimeApi};
+use sp_runtime::traits::Block as BlockT;
+
+/// super trait for accessing methods that rely on internal runtime api
+pub trait ApiAccess<Block, Backend, RA>:
+    ProvideRuntimeApi<Block, Api = RA::RuntimeApi>
+    + CallApiAt<Block, StateBackend = StateBackendFor<Backend, Block>>
+    + Send
+    + Sync
+    + Sized
+where
+    Block: BlockT,
+    Backend: BackendT<Block>,
+    RA: ConstructRuntimeApi<Block, Self>,
+{
+}
+
+impl<Client, Block, Backend, RA> ApiAccess<Block, Backend, RA> for Client
+where
+    Block: BlockT,
+    Backend: BackendT<Block>,
+    RA: ConstructRuntimeApi<Block, Self>,
+    Client: ProvideRuntimeApi<Block, Api = RA::RuntimeApi>
+        + CallApiAt<Block, StateBackend = StateBackendFor<Backend, Block>>
+        + Send
+        + Sync
+        + Sized,
+{
 }

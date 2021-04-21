@@ -6,16 +6,18 @@ use std::{collections::HashSet, sync::Arc};
 
 use sc_client_api::{
     backend::{AuxStore, Backend, PrunableStateChangesTrieStorage},
+    client::BlockBackend,
     UsageInfo,
 };
 use sc_client_db::{DbHash, DbState, TransactionStorageMode};
 use sc_state_db::{PruningMode, StateDb};
-use sp_blockchain::{HeaderBackend, HeaderMetadata};
+use sp_blockchain::{Backend as BlockchainBackend, HeaderBackend, HeaderMetadata};
+use sp_consensus::BlockStatus;
 use sp_database::Database;
 use sp_runtime::{
-    generic::BlockId,
+    generic::{BlockId, SignedBlock},
     traits::{Block as BlockT, NumberFor, SaturatedConversion},
-    Justification,
+    Justification, Justifications,
 };
 use sp_state_machine::Storage;
 
@@ -236,5 +238,63 @@ where
 
     fn get_aux(&self, key: &[u8]) -> BlockchainResult<Option<Vec<u8>>> {
         Ok(self.storage.db.get(columns::AUX, key))
+    }
+}
+
+impl<Block> BlockBackend<Block> for ReadOnlyBackend<Block>
+where
+    Block: BlockT,
+{
+    fn block_body(&self, id: &BlockId<Block>) -> BlockchainResult<Option<Vec<Block::Extrinsic>>> {
+        self.blockchain().body(*id)
+    }
+
+    fn block(&self, id: &BlockId<Block>) -> BlockchainResult<Option<SignedBlock<Block>>> {
+        Ok(
+            match (
+                self.blockchain().header(*id)?,
+                self.blockchain().body(*id)?,
+                self.blockchain().justifications(*id)?,
+            ) {
+                (Some(header), Some(extrinsics), justifications) => Some(SignedBlock {
+                    block: Block::new(header, extrinsics),
+                    justifications,
+                }),
+                _ => None,
+            },
+        )
+    }
+
+    fn block_status(&self, id: &BlockId<Block>) -> BlockchainResult<BlockStatus> {
+        let hash_and_number = match *id {
+            BlockId::Hash(hash) => self.blockchain().number(hash)?.map(|number| (hash, number)),
+            BlockId::Number(number) => self.blockchain().hash(number)?.map(|hash| (hash, number)),
+        };
+        match hash_and_number {
+            Some((hash, number)) => {
+                if self.have_state_at(&hash, number) {
+                    Ok(BlockStatus::InChainWithState)
+                } else {
+                    Ok(BlockStatus::InChainPruned)
+                }
+            }
+            None => Ok(BlockStatus::Unknown),
+        }
+    }
+
+    fn justifications(&self, id: &BlockId<Block>) -> BlockchainResult<Option<Justifications>> {
+        self.blockchain().justifications(*id)
+    }
+
+    fn block_hash(&self, number: NumberFor<Block>) -> BlockchainResult<Option<<Block>::Hash>> {
+        self.blockchain().hash(number)
+    }
+
+    fn indexed_transaction(&self, hash: &Block::Hash) -> BlockchainResult<Option<Vec<u8>>> {
+        self.blockchain().indexed_transaction(hash)
+    }
+
+    fn has_indexed_transaction(&self, hash: &Block::Hash) -> BlockchainResult<bool> {
+        self.blockchain().has_indexed_transaction(hash)
     }
 }

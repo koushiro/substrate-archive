@@ -11,17 +11,17 @@ use crate::logger::LoggerConfig;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ArchiveConfig {
-    logger: LoggerConfig,
-    client: ClientConfig,
-    postgres: PostgresConfig,
-    kafka: Option<KafkaConfig>,
+    pub(crate) logger: LoggerConfig,
+    pub(crate) client: ClientConfig,
+    pub(crate) postgres: PostgresConfig,
+    pub(crate) kafka: Option<KafkaConfig>,
 }
 
 #[derive(Clone, Debug, StructOpt)]
 #[structopt(author, about)]
 pub struct ArchiveCli {
     /// Specifies the config file.
-    #[structopt(short = "c", long, name = "FILE")]
+    #[structopt(short, long, name = "FILE")]
     config: PathBuf,
 }
 

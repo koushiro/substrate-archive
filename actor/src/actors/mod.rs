@@ -27,24 +27,26 @@ use crate::{config::ActorConfig, error::ActorError, messages::*};
 ///                                               └────►│  ...  │
 ///                                                     └───────┘
 ///
-pub struct Actors<Block, B>
+pub struct Actors<Block, B, Api>
 where
     Block: BlockT,
-    B: Backend<Block> + BlockBackend<Block> + ProvideRuntimeApi<Block> + Send + Sync + 'static,
-    <B as ProvideRuntimeApi<Block>>::Api: CoreApi<Block>
+    B: Backend<Block> + BlockBackend<Block> + 'static,
+    Api: ProvideRuntimeApi<Block> + Send + Sync + 'static,
+    <Api as ProvideRuntimeApi<Block>>::Api: CoreApi<Block>
         + MetadataApi<Block>
         + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
 {
     db: Address<postgres::PostgresActor<Block>>,
-    metadata: Address<metadata::MetadataActor<Block, B>>,
-    block: Address<block::BlockActor<Block, B>>,
+    metadata: Address<metadata::MetadataActor<Block>>,
+    block: Address<block::BlockActor<Block, B, Api>>,
 }
 
-impl<Block, B> Actors<Block, B>
+impl<Block, B, Api> Actors<Block, B, Api>
 where
     Block: BlockT,
-    B: Backend<Block> + BlockBackend<Block> + ProvideRuntimeApi<Block> + Send + Sync + 'static,
-    <B as ProvideRuntimeApi<Block>>::Api: CoreApi<Block>
+    B: Backend<Block> + BlockBackend<Block> + 'static,
+    Api: ProvideRuntimeApi<Block> + Send + Sync + 'static,
+    <Api as ProvideRuntimeApi<Block>>::Api: CoreApi<Block>
         + MetadataApi<Block>
         + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
 {
@@ -63,12 +65,17 @@ where
         Ok(db)
     }
 
-    pub async fn spawn(backend: Arc<B>, config: ActorConfig) -> Result<Self, ActorError> {
+    pub async fn spawn(
+        backend: Arc<B>,
+        api: Arc<Api>,
+        config: ActorConfig,
+    ) -> Result<Self, ActorError> {
         let db = Self::spawn_db(config).await?;
-        let metadata = metadata::MetadataActor::new(backend.clone(), db.clone())
+
+        let metadata = metadata::MetadataActor::new(api.clone(), db.clone())
             .create(None)
             .spawn_global();
-        let block = block::BlockActor::new(backend, metadata.clone(), db.clone())
+        let block = block::BlockActor::new(backend, api, metadata.clone(), db.clone())
             .create(None)
             .spawn_global();
 

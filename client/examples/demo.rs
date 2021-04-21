@@ -50,11 +50,11 @@ fn runtime_version(executor: WasmExecutor, code: &[u8]) -> RuntimeVersion {
         })
         .expect("wasm execution error")
     });
-    decode_version(version.as_slice()).expect("decoder error")
+    decode_version(version).expect("decoder error")
 }
 
-fn decode_version(mut version: &[u8]) -> Result<RuntimeVersion, WasmError> {
-    let v: RuntimeVersion = sp_api::OldRuntimeVersion::decode(&mut version)
+fn decode_version(version: Vec<u8>) -> Result<RuntimeVersion, WasmError> {
+    let v: RuntimeVersion = sp_api::OldRuntimeVersion::decode(&mut version.as_slice())
         .map_err(|_| {
             WasmError::Instantiation(
                 "failed to decode \"Core_version\" result using old runtime version".into(),
@@ -64,7 +64,7 @@ fn decode_version(mut version: &[u8]) -> Result<RuntimeVersion, WasmError> {
 
     let core_api_id = sp_core::hashing::blake2_64(b"Core");
     if v.has_api_with(&core_api_id, |v| v >= 3) {
-        RuntimeVersion::decode(&mut version).map_err(|_| {
+        RuntimeVersion::decode(&mut version.as_slice()).map_err(|_| {
             WasmError::Instantiation("failed to decode \"Core_version\" result".into())
         })
     } else {

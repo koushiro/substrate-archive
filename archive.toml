@@ -12,7 +12,7 @@ file = { level = "DEBUG", path = "./archive.log" }
 # Archive client configuration #
 ################################
 [client]
-wasm_runtime_overrides = "./wasm_runtime"
+#wasm_runtime_overrides = "./wasm_runtime"
 
 # RocksDB backend configuration for archive client
 [client.rocksdb]
@@ -37,20 +37,20 @@ connect_timeout = 10
 ##################################
 # Archive kafka configuration #
 ##################################
-[kafka]
-queue_timeout = 0
-topic = { metadata = "polkadot-metadata", block = "polkadot-block" }
+#[kafka]
+#queue_timeout = 0
+#topic = { metadata = "polkadot-metadata", block = "polkadot-block" }
 # https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
-[kafka.rdkafka]
-"bootstrap.servers" = "localhost:9092"
-"compression.codec" = "gzip" # "none" | "gzip" | "snappy" | "lz4" | "zstd"
-# https://stackoverflow.com/questions/59322133/kafka-broker-message-size-too-large
-# Broker:
-#   `message.max.bytes`: default 1000000 (1 MB)
-#   `replica.fetch.max.bytes`: default 1048576 (1 MiB)
-# Producer:
-#   `max.request.size`
-# Consumer:
-#   `max.partition.fetch.bytes`: default 1048576 (10 MiB)
-#   `fetch.max.bytes`: default 52428800 (50 MiB)
-"message.max.bytes"="10000000" # 10 MB
+#[kafka.rdkafka]
+#"bootstrap.servers" = "localhost:9092"
+#"compression.codec" = "gzip" # "none" | "gzip" | "snappy" | "lz4" | "zstd"
+## https://stackoverflow.com/questions/59322133/kafka-broker-message-size-too-large
+## Broker:
+##   `message.max.bytes`: default 1000000 (1 MB)
+##   `replica.fetch.max.bytes`: default 1048576 (1 MiB)
+## Producer:
+##   `max.request.size`
+## Consumer:
+##   `max.partition.fetch.bytes`: default 1048576 (10 MiB)
+##   `fetch.max.bytes`: default 52428800 (50 MiB)
+#"message.max.bytes"="10000000" # 10 MB

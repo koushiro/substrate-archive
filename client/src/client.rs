@@ -6,21 +6,15 @@ use codec::{Decode, Encode};
 use sc_client_api::{
     backend::{self, KeyIterator, PrunableStateChangesTrieStorage, StorageProvider},
     call_executor::{CallExecutor, ExecutorProvider},
-    client::BlockBackend,
     execution_extensions::ExecutionExtensions,
 };
 use sp_api::{
     ApiError, ApiRef, BlockId, CallApiAt, CallApiAtParams, ConstructRuntimeApi, Core as CoreApi,
     Metadata as MetadataApi, NativeOrEncoded, ProvideRuntimeApi,
 };
-use sp_blockchain::{Backend as BlockchainBackend, HeaderBackend};
-use sp_consensus::BlockStatus;
+use sp_blockchain::HeaderBackend;
 use sp_core::{convert_hash, ChangesTrieConfiguration, OpaqueMetadata};
-use sp_runtime::{
-    generic::SignedBlock,
-    traits::{Block as BlockT, HashFor, Header as HeaderT, NumberFor, One},
-    Justifications,
-};
+use sp_runtime::traits::{Block as BlockT, HashFor, Header as HeaderT, NumberFor, One};
 use sp_state_machine::{
     key_changes, Backend as StateBackend, ChangesTrieAnchorBlockId, ChangesTrieConfigurationRange,
 };
@@ -29,25 +23,25 @@ use sp_version::RuntimeVersion;
 
 use crate::error::{BlockchainError, BlockchainResult};
 
-pub struct Client<B, E, Block, RA>
+pub struct Client<Block, Backend, Executor, RA>
 where
     Block: BlockT,
 {
-    backend: Arc<B>,
-    executor: E,
+    backend: Arc<Backend>,
+    executor: Executor,
     execution_extensions: ExecutionExtensions<Block>,
     _marker: PhantomData<RA>,
 }
 
-impl<B, E, Block, RA> Client<B, E, Block, RA>
+impl<Block, Backend, Executor, RA> Client<Block, Backend, Executor, RA>
 where
-    B: backend::Backend<Block>,
-    E: CallExecutor<Block>,
+    Backend: backend::Backend<Block>,
+    Executor: CallExecutor<Block>,
     Block: BlockT,
 {
     pub fn new(
-        backend: Arc<B>,
-        executor: E,
+        backend: Arc<Backend>,
+        executor: Executor,
         execution_extensions: ExecutionExtensions<Block>,
     ) -> Self {
         Self {
@@ -59,14 +53,14 @@ where
     }
 
     /// Get the backend of client.
-    pub fn backend(&self) -> Arc<B> {
+    pub fn backend(&self) -> Arc<Backend> {
         self.backend.clone()
     }
 
     /// Get metadata by id.
     pub fn metadata(&self, id: &BlockId<Block>) -> BlockchainResult<OpaqueMetadata>
     where
-        E: CallExecutor<Block, Backend = B>,
+        Executor: CallExecutor<Block, Backend = Backend>,
         RA: ConstructRuntimeApi<Block, Self>,
         <RA as ConstructRuntimeApi<Block, Self>>::RuntimeApi: MetadataApi<Block>,
     {
@@ -88,7 +82,7 @@ where
     }
 
     /// Get a reference to the state at a given block.
-    pub fn state_at(&self, block: BlockId<Block>) -> BlockchainResult<B::State> {
+    pub fn state_at(&self, block: BlockId<Block>) -> BlockchainResult<Backend::State> {
         self.backend.state_at(block)
     }
 
@@ -164,11 +158,11 @@ where
     }
 }
 
-impl<B, E, Block, RA> ProvideRuntimeApi<Block> for Client<B, E, Block, RA>
+impl<Block, Backend, Executor, RA> ProvideRuntimeApi<Block> for Client<Block, Backend, Executor, RA>
 where
-    B: backend::Backend<Block>,
-    E: CallExecutor<Block, Backend = B>,
     Block: BlockT,
+    Backend: backend::Backend<Block>,
+    Executor: CallExecutor<Block, Backend = Backend>,
     RA: ConstructRuntimeApi<Block, Self>,
 {
     type Api = <RA as ConstructRuntimeApi<Block, Self>>::RuntimeApi;
@@ -178,13 +172,13 @@ where
     }
 }
 
-impl<B, E, Block, RA> CallApiAt<Block> for Client<B, E, Block, RA>
+impl<Block, Backend, Executor, RA> CallApiAt<Block> for Client<Block, Backend, Executor, RA>
 where
-    B: backend::Backend<Block>,
-    E: CallExecutor<Block, Backend = B>,
     Block: BlockT,
+    Backend: backend::Backend<Block>,
+    Executor: CallExecutor<Block, Backend = Backend>,
 {
-    type StateBackend = B::State;
+    type StateBackend = Backend::State;
 
     fn call_api_at<
         R: Encode + Decode + PartialEq,
@@ -227,81 +221,13 @@ where
     }
 }
 
-impl<B, E, Block, RA> BlockBackend<Block> for Client<B, E, Block, RA>
+impl<Block, Backend, Executor, RA> ExecutorProvider<Block> for Client<Block, Backend, Executor, RA>
 where
-    B: backend::Backend<Block>,
-    E: CallExecutor<Block>,
     Block: BlockT,
+    Backend: backend::Backend<Block>,
+    Executor: CallExecutor<Block>,
 {
-    fn block_body(&self, id: &BlockId<Block>) -> BlockchainResult<Option<Vec<Block::Extrinsic>>> {
-        self.backend.blockchain().body(*id)
-    }
-
-    fn block(&self, id: &BlockId<Block>) -> BlockchainResult<Option<SignedBlock<Block>>> {
-        Ok(
-            match (
-                self.backend.blockchain().header(*id)?,
-                self.backend.blockchain().body(*id)?,
-                self.backend.blockchain().justifications(*id)?,
-            ) {
-                (Some(header), Some(extrinsics), justifications) => Some(SignedBlock {
-                    block: Block::new(header, extrinsics),
-                    justifications,
-                }),
-                _ => None,
-            },
-        )
-    }
-
-    fn block_status(&self, id: &BlockId<Block>) -> BlockchainResult<BlockStatus> {
-        let hash_and_number = match *id {
-            BlockId::Hash(hash) => self
-                .backend
-                .blockchain()
-                .number(hash)?
-                .map(|number| (hash, number)),
-            BlockId::Number(number) => self
-                .backend
-                .blockchain()
-                .hash(number)?
-                .map(|hash| (hash, number)),
-        };
-        match hash_and_number {
-            Some((hash, number)) => {
-                if self.backend.have_state_at(&hash, number) {
-                    Ok(BlockStatus::InChainWithState)
-                } else {
-                    Ok(BlockStatus::InChainPruned)
-                }
-            }
-            None => Ok(BlockStatus::Unknown),
-        }
-    }
-
-    fn justifications(&self, id: &BlockId<Block>) -> BlockchainResult<Option<Justifications>> {
-        self.backend.blockchain().justifications(*id)
-    }
-
-    fn block_hash(&self, number: NumberFor<Block>) -> BlockchainResult<Option<<Block>::Hash>> {
-        self.backend.blockchain().hash(number)
-    }
-
-    fn indexed_transaction(&self, hash: &Block::Hash) -> BlockchainResult<Option<Vec<u8>>> {
-        self.backend.blockchain().indexed_transaction(hash)
-    }
-
-    fn has_indexed_transaction(&self, hash: &Block::Hash) -> BlockchainResult<bool> {
-        self.backend.blockchain().has_indexed_transaction(hash)
-    }
-}
-
-impl<Block, B, E, RA> ExecutorProvider<Block> for Client<B, E, Block, RA>
-where
-    B: backend::Backend<Block>,
-    E: CallExecutor<Block>,
-    Block: BlockT,
-{
-    type Executor = E;
+    type Executor = Executor;
 
     fn executor(&self) -> &Self::Executor {
         &self.executor
@@ -312,11 +238,12 @@ where
     }
 }
 
-impl<Block, B, E, RA> StorageProvider<Block, B> for Client<B, E, Block, RA>
+impl<Block, Backend, Executor, RA> StorageProvider<Block, Backend>
+    for Client<Block, Backend, Executor, RA>
 where
-    B: backend::Backend<Block>,
-    E: CallExecutor<Block>,
     Block: BlockT,
+    Backend: backend::Backend<Block>,
+    Executor: CallExecutor<Block>,
 {
     fn storage(
         &self,
@@ -375,7 +302,7 @@ where
         id: &BlockId<Block>,
         prefix: Option<&'a StorageKey>,
         start_key: Option<&StorageKey>,
-    ) -> BlockchainResult<KeyIterator<'a, B::State, Block>> {
+    ) -> BlockchainResult<KeyIterator<'a, Backend::State, Block>> {
         let state = self.state_at(*id)?;
         let current_key = start_key
             .or(prefix)
