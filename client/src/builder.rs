@@ -11,7 +11,7 @@ use crate::{
     client::Client,
     config::ClientConfig,
     database::{RocksDbConfig, SecondaryRocksDb},
-    error::ArchiveClientResult,
+    error::{BlockchainError, BlockchainResult},
 };
 
 /// Archive client type.
@@ -27,7 +27,7 @@ pub type ArchiveCallExecutor<Block, Executor> =
 
 pub fn new_archive_client<Block, Executor, RA>(
     config: ClientConfig,
-) -> ArchiveClientResult<ArchiveClient<Block, Executor, RA>>
+) -> BlockchainResult<ArchiveClient<Block, Executor, RA>>
 where
     Block: BlockT,
     Executor: NativeExecutionDispatch + 'static,
@@ -67,11 +67,13 @@ where
 fn new_secondary_rocksdb_backend<Block>(
     rocksdb: RocksDbConfig,
     backend: BackendConfig,
-) -> ArchiveClientResult<Arc<ReadOnlyBackend<Block>>>
+) -> BlockchainResult<Arc<ReadOnlyBackend<Block>>>
 where
     Block: BlockT,
 {
-    let db = Arc::new(SecondaryRocksDb::open(rocksdb)?);
+    let db =
+        SecondaryRocksDb::open(rocksdb).map_err(|err| BlockchainError::Backend(err.to_string()))?;
+    let db = Arc::new(db);
     let backend = Arc::new(ReadOnlyBackend::new(db, backend)?);
     Ok(backend)
 }

@@ -8,24 +8,24 @@ use sp_runtime::{
 use sp_storage::{StorageData, StorageKey};
 
 #[derive(Clone, Debug, Serialize)]
-pub struct MetadataPayload<B: BlockT> {
+pub struct MetadataPayload<Block: BlockT> {
     pub spec_version: u32,
-    pub block_num: <B::Header as HeaderT>::Number,
-    pub block_hash: <B::Header as HeaderT>::Hash,
+    pub block_num: <Block::Header as HeaderT>::Number,
+    pub block_hash: <Block::Header as HeaderT>::Hash,
     #[serde(with = "serde_bytes")]
     pub meta: Vec<u8>,
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub struct BlockPayload<B: BlockT> {
+pub struct BlockPayload<Block: BlockT> {
     pub spec_version: u32,
-    pub block_num: <B::Header as HeaderT>::Number,
-    pub block_hash: <B::Header as HeaderT>::Hash,
-    pub parent_hash: <B::Header as HeaderT>::Hash,
-    pub state_root: <B::Header as HeaderT>::Hash,
-    pub extrinsics_root: <B::Header as HeaderT>::Hash,
-    pub digest: Digest<<B::Header as HeaderT>::Hash>,
-    pub extrinsics: Vec<<B as BlockT>::Extrinsic>,
+    pub block_num: <Block::Header as HeaderT>::Number,
+    pub block_hash: <Block::Header as HeaderT>::Hash,
+    pub parent_hash: <Block::Header as HeaderT>::Hash,
+    pub state_root: <Block::Header as HeaderT>::Hash,
+    pub extrinsics_root: <Block::Header as HeaderT>::Hash,
+    pub digest: Digest<<Block::Header as HeaderT>::Hash>,
+    pub extrinsics: Vec<<Block as BlockT>::Extrinsic>,
 
     pub justifications: Option<Justifications>,
 

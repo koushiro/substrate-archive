@@ -7,19 +7,19 @@ use sp_runtime::{
 use sp_storage::{StorageData, StorageKey};
 
 #[derive(Clone, Debug)]
-pub struct Metadata<B: BlockT> {
+pub struct MetadataMessage<Block: BlockT> {
     pub spec_version: u32,
-    pub block_num: <B::Header as HeaderT>::Number,
-    pub block_hash: <B::Header as HeaderT>::Hash,
+    pub block_num: <Block::Header as HeaderT>::Number,
+    pub block_hash: <Block::Header as HeaderT>::Hash,
     pub meta: Vec<u8>,
 }
 
-impl<B: BlockT> xtra::Message for Metadata<B> {
+impl<Block: BlockT> xtra::Message for MetadataMessage<Block> {
     type Result = ();
 }
 
-impl<B: BlockT> From<Metadata<B>> for archive_postgres::MetadataModel {
-    fn from(metadata: Metadata<B>) -> Self {
+impl<Block: BlockT> From<MetadataMessage<Block>> for archive_postgres::MetadataModel {
+    fn from(metadata: MetadataMessage<Block>) -> Self {
         Self {
             spec_version: metadata.spec_version,
             block_num: metadata.block_num.saturated_into(),
@@ -29,8 +29,8 @@ impl<B: BlockT> From<Metadata<B>> for archive_postgres::MetadataModel {
     }
 }
 
-impl<B: BlockT> From<Metadata<B>> for archive_kafka::MetadataPayload<B> {
-    fn from(metadata: Metadata<B>) -> Self {
+impl<Block: BlockT> From<MetadataMessage<Block>> for archive_kafka::MetadataPayload<Block> {
+    fn from(metadata: MetadataMessage<Block>) -> Self {
         Self {
             spec_version: metadata.spec_version,
             block_num: metadata.block_num,
@@ -41,18 +41,18 @@ impl<B: BlockT> From<Metadata<B>> for archive_kafka::MetadataPayload<B> {
 }
 
 #[derive(Clone, Debug)]
-pub struct Block<B: BlockT> {
+pub struct BlockMessage<Block: BlockT> {
     pub spec_version: u32,
-    pub inner: SignedBlock<B>,
+    pub inner: SignedBlock<Block>,
     pub changes: Vec<(StorageKey, Option<StorageData>)>,
 }
 
-impl<B: BlockT> xtra::Message for Block<B> {
+impl<Block: BlockT> xtra::Message for BlockMessage<Block> {
     type Result = ();
 }
 
-impl<B: BlockT> From<Block<B>> for archive_postgres::BlockModel {
-    fn from(block: Block<B>) -> Self {
+impl<Block: BlockT> From<BlockMessage<Block>> for archive_postgres::BlockModel {
+    fn from(block: BlockMessage<Block>) -> Self {
         Self {
             spec_version: block.spec_version,
             block_num: (*block.inner.block.header().number()).saturated_into(),
@@ -84,8 +84,8 @@ impl<B: BlockT> From<Block<B>> for archive_postgres::BlockModel {
     }
 }
 
-impl<B: BlockT> From<Block<B>> for archive_kafka::BlockPayload<B> {
-    fn from(block: Block<B>) -> Self {
+impl<Block: BlockT> From<BlockMessage<Block>> for archive_kafka::BlockPayload<Block> {
+    fn from(block: BlockMessage<Block>) -> Self {
         Self {
             spec_version: block.spec_version,
             block_num: *block.inner.block.header().number(),

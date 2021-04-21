@@ -4,7 +4,7 @@ use sp_runtime::traits::Block as BlockT;
 
 use archive_kafka::{BlockPayload, KafkaConfig, KafkaError, KafkaProducer, MetadataPayload};
 
-use crate::types::{Block, Die, Metadata};
+use crate::messages::{BlockMessage, Die, MetadataMessage};
 
 pub struct KafkaActor<B: BlockT> {
     producer: KafkaProducer,
@@ -25,12 +25,12 @@ impl<B: BlockT> KafkaActor<B> {
 impl<B: BlockT> Actor for KafkaActor<B> {}
 
 #[async_trait::async_trait]
-impl<B: BlockT> Handler<Metadata<B>> for KafkaActor<B> {
+impl<B: BlockT> Handler<MetadataMessage<B>> for KafkaActor<B> {
     async fn handle(
         &mut self,
-        message: Metadata<B>,
+        message: MetadataMessage<B>,
         _: &mut Context<Self>,
-    ) -> <Metadata<B> as Message>::Result {
+    ) -> <MetadataMessage<B> as Message>::Result {
         let payload = MetadataPayload::from(message);
         if let Err(err) = self.producer.send(payload).await {
             log::error!("{}", err);
@@ -39,12 +39,12 @@ impl<B: BlockT> Handler<Metadata<B>> for KafkaActor<B> {
 }
 
 #[async_trait::async_trait]
-impl<B: BlockT> Handler<Block<B>> for KafkaActor<B> {
+impl<B: BlockT> Handler<BlockMessage<B>> for KafkaActor<B> {
     async fn handle(
         &mut self,
-        message: Block<B>,
+        message: BlockMessage<B>,
         _: &mut Context<Self>,
-    ) -> <Block<B> as Message>::Result {
+    ) -> <BlockMessage<B> as Message>::Result {
         let payload = BlockPayload::from(message);
         if let Err(err) = self.producer.send(payload).await {
             log::error!("{}", err);

@@ -8,7 +8,6 @@ edition = "2018"
 log = "0.4"
 parking_lot = "0.11"
 serde = { version = "1.0", features = ["derive"] }
-thiserror = "1.0"
 
 # Parity
 codec = { package = "parity-scale-codec", version = "2.0",  features = ["derive", "full"] }
@@ -18,10 +17,8 @@ kvdb-rocksdb = "0.11"
 memory-db = "0.26"
 
 # Substrate
-sc-chain-spec = "3.0"
 sc-client-api = "3.0"
 sc-client-db = "0.9"
-sc-executor-common = "0.9"
 sc-executor = { version = "0.9", features = ["wasmtime"] }
 sc-service = "0.9"
 sc-state-db = "0.9"
@@ -33,7 +30,6 @@ sp-database = "3.0"
 sp-runtime = "3.0"
 sp-state-machine = "0.9"
 sp-storage = "3.0"
-sp-trie = "3.0"
 sp-version = "3.0"
 sp-wasm-interface = "3.0"
 
@@ -41,6 +37,7 @@ sp-wasm-interface = "3.0"
 env_logger = "0.8"
 hex = "0.4"
 
+sc-executor-common = "0.9"
 sp-externalities = "0.9"
 sp-io = "3.0"
 sp-runtime-interface = "3.0"

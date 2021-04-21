@@ -1,14 +1,14 @@
-use archive_kafka::KafkaConfig;
-use archive_postgres::PostgresConfig;
+pub use archive_kafka::KafkaConfig;
+pub use archive_postgres::PostgresConfig;
 
 #[derive(Clone, Debug)]
 pub struct ActorConfig {
     pub postgres: PostgresConfig,
-    pub dispatcher: ActorDispatcherConfig,
+    pub dispatcher: DispatcherConfig,
 }
 
 #[derive(Clone, Debug)]
-pub struct ActorDispatcherConfig {
+pub struct DispatcherConfig {
     pub kafka: Option<KafkaConfig>,
     // others
 }

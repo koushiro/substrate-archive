@@ -6,6 +6,8 @@ edition = "2018"
 
 [dependencies]
 async-trait = "0.1"
+flume = "0.10"
+jod-thread = "0.1"
 log = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -14,13 +16,12 @@ tokio = { version = "1.5", features = ["rt-multi-thread"] }
 xtra = { version = "0.5", features = ["with-tokio-1"] }
 
 codec = { package = "parity-scale-codec", version = "2.0", features = ["derive", "full"] }
-sc-executor = { version = "0.9", features = ["wasmtime"] }
+sc-client-api = "3.0"
 sp-api = "3.0"
+sp-blockchain = "3.0"
 sp-core = "3.0"
 sp-runtime = "3.0"
 sp-storage = "3.0"
-sp-version = "3.0"
 
-archive-client = { path = "../client" }
 archive-postgres = { path = "../postgres" }
 archive-kafka = { path = "../kafka" }

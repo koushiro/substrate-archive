@@ -4,9 +4,8 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use structopt::StructOpt;
 
+use archive_actor::{KafkaConfig, PostgresConfig};
 use archive_client::ClientConfig;
-use archive_kafka::KafkaConfig;
-use archive_postgres::PostgresConfig;
 
 use crate::logger::LoggerConfig;
 

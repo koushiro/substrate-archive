@@ -134,13 +134,11 @@ name = "archive"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "archive-actor",
  "archive-client",
- "archive-kafka",
- "archive-postgres",
  "async-trait",
  "chrono",
  "fern",
- "flume",
  "futures 0.3.13",
  "log",
  "parity-scale-codec",
@@ -155,20 +153,21 @@ dependencies = [
 name = "archive-actor"
 version = "0.1.0"
 dependencies = [
- "archive-client",
  "archive-kafka",
  "archive-postgres",
  "async-trait",
+ "flume",
+ "jod-thread",
  "log",
  "parity-scale-codec",
- "sc-executor",
+ "sc-client-api",
  "serde",
  "serde_json",
  "sp-api",
+ "sp-blockchain",
  "sp-core",
  "sp-runtime",
  "sp-storage",
- "sp-version",
  "thiserror",
  "tokio 1.5.0",
  "xtra",
@@ -187,7 +186,6 @@ dependencies = [
  "memory-db",
  "parity-scale-codec",
  "parking_lot 0.11.1",
- "sc-chain-spec",
  "sc-client-api",
  "sc-client-db",
  "sc-executor",
@@ -206,10 +204,8 @@ dependencies = [
  "sp-runtime-interface",
  "sp-state-machine",
  "sp-storage",
- "sp-trie",
  "sp-version",
  "sp-wasm-interface",
- "thiserror",
 ]
 
 [[package]]
@@ -2492,6 +2488,12 @@ checksum = "5c71313ebb9439f74b00d9d2dcec36440beaf57a6aa0623068441dd7cd81a7f2"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "jod-thread"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b23360e99b8717f20aaa4598f5a6541efbe30630039fbc7706cf954a87947ae"
 
 [[package]]
 name = "js-sys"

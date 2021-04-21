@@ -73,8 +73,8 @@ where
         self.runtime_api().metadata(id).map_err(Into::into)
     }
 
-    /// Get the RuntimeVersion at a given block.
-    pub fn runtime_version_at(&self, id: &BlockId<Block>) -> BlockchainResult<RuntimeVersion> {
+    /// Get the RuntimeVersion by id.
+    pub fn runtime_version(&self, id: &BlockId<Block>) -> BlockchainResult<RuntimeVersion> {
         self.executor.runtime_version(id)
     }
 
@@ -223,7 +223,7 @@ where
     }
 
     fn runtime_version_at(&self, at: &BlockId<Block>) -> Result<RuntimeVersion, ApiError> {
-        self.runtime_version_at(at).map_err(Into::into)
+        self.runtime_version(at).map_err(Into::into)
     }
 }
 

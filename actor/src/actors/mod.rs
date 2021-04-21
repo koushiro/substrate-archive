@@ -5,13 +5,16 @@ mod postgres;
 
 use std::sync::Arc;
 
-use xtra::{prelude::*, spawn::TokioGlobalSpawnExt, Disconnected};
+use xtra::{prelude::*, spawn::TokioGlobalSpawnExt};
 
+use sc_client_api::{
+    backend::{Backend, StateBackendFor},
+    client::BlockBackend,
+};
+use sp_api::{ApiExt, Core as CoreApi, Metadata as MetadataApi, ProvideRuntimeApi};
 use sp_runtime::traits::Block as BlockT;
 
-use archive_client::ArchiveClient;
-
-use crate::{config::ActorConfig, error::ActorError, types::*};
+use crate::{config::ActorConfig, error::ActorError, messages::*};
 
 /// The direction of data flow:
 ///                                                     ┌───────┐
@@ -24,13 +27,27 @@ use crate::{config::ActorConfig, error::ActorError, types::*};
 ///                                               └────►│  ...  │
 ///                                                     └───────┘
 ///
-pub struct Actors<Block: BlockT> {
+pub struct Actors<Block, B>
+where
+    Block: BlockT,
+    B: Backend<Block> + BlockBackend<Block> + ProvideRuntimeApi<Block> + Send + Sync + 'static,
+    <B as ProvideRuntimeApi<Block>>::Api: CoreApi<Block>
+        + MetadataApi<Block>
+        + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
+{
     db: Address<postgres::PostgresActor<Block>>,
-    metadata: Address<metadata::MetadataActor<Block>>,
-    block: Address<block::BlockActor<Block>>,
+    metadata: Address<metadata::MetadataActor<Block, B>>,
+    block: Address<block::BlockActor<Block, B>>,
 }
 
-impl<Block: BlockT> Actors<Block> {
+impl<Block, B> Actors<Block, B>
+where
+    Block: BlockT,
+    B: Backend<Block> + BlockBackend<Block> + ProvideRuntimeApi<Block> + Send + Sync + 'static,
+    <B as ProvideRuntimeApi<Block>>::Api: CoreApi<Block>
+        + MetadataApi<Block>
+        + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
+{
     async fn spawn_db(
         config: ActorConfig,
     ) -> Result<Address<postgres::PostgresActor<Block>>, ActorError> {
@@ -46,15 +63,12 @@ impl<Block: BlockT> Actors<Block> {
         Ok(db)
     }
 
-    pub async fn spawn<Executor, RA>(
-        _client: Arc<ArchiveClient<Block, Executor, RA>>,
-        config: ActorConfig,
-    ) -> Result<Self, ActorError> {
+    pub async fn spawn(backend: Arc<B>, config: ActorConfig) -> Result<Self, ActorError> {
         let db = Self::spawn_db(config).await?;
-        let metadata = metadata::MetadataActor::new(db.clone())
+        let metadata = metadata::MetadataActor::new(backend.clone(), db.clone())
             .create(None)
             .spawn_global();
-        let block = block::BlockActor::new(metadata.clone(), db.clone())
+        let block = block::BlockActor::new(backend, metadata.clone(), db.clone())
             .create(None)
             .spawn_global();
 
@@ -65,7 +79,7 @@ impl<Block: BlockT> Actors<Block> {
         })
     }
 
-    pub async fn kill(self) -> Result<(), Disconnected> {
+    pub async fn kill(self) -> Result<(), ActorError> {
         self.block.send(Die).await?;
         self.metadata.send(Die).await?;
         self.db.send(Die).await?;

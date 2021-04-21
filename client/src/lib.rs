@@ -12,7 +12,7 @@ pub use self::{
     client::Client,
     config::ClientConfig,
     database::{RocksDbConfig, SecondaryRocksDb},
-    error::{ArchiveClientError, ArchiveClientResult, BlockchainError, BlockchainResult},
+    error::{BlockchainError, BlockchainResult},
 };
 
 #[allow(unused)]
