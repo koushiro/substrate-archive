@@ -87,8 +87,8 @@ impl<B: BlockT> RefTrackingState<B> {
     ) -> Self {
         RefTrackingState {
             state,
-            parent_hash,
             storage,
+            parent_hash,
         }
     }
 }

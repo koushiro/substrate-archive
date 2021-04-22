@@ -74,10 +74,10 @@ impl<Block: BlockT> From<BlockMessage<Block>> for archive_postgres::BlockModel {
                 .iter()
                 .map(|ext| ext.encode())
                 .collect(),
-            justifications: block.inner.justifications.map(|justifications| {
-                serde_json::to_value(justifications)
-                    .expect("Serialize justifications shouldn't be fail")
-            }),
+            justifications: block
+                .inner
+                .justifications
+                .map(|justifications| justifications.encode()),
             changes: serde_json::to_value(block.changes)
                 .expect("Serialize storage changes shouldn't be fail"),
         }

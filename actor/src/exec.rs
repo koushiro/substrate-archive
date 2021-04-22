@@ -52,6 +52,17 @@ where
     pub fn into_storage_changes(self) -> Result<StorageChanges, BlockchainError> {
         let parent_hash = *self.block.header().parent_hash();
         let state = self.backend.state_at(self.id)?;
+
+        // FIXME: ????
+        // Wasm runtime calculates a different number of digest items
+        // than what we have in the block
+        // We don't do anything with consensus
+        // so digest isn't very important (we don't currently index digest items anyway)
+        // popping a digest item has no effect on storage changes afaik
+        // let (mut header, ext) = self.block.deconstruct();
+        // header.digest_mut().pop();
+        // let block = Block::new(header, ext);
+
         self.api.execute_block(&self.id, self.block)?;
         let storage_changes = self
             .api

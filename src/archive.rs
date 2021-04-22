@@ -17,7 +17,7 @@ use crate::{cli::ArchiveConfig, error::ArchiveError};
 pub trait Archive {
     type Error;
 
-    fn drive(&mut self) -> Result<(), Self::Error>;
+    fn drive(&self) -> Result<(), Self::Error>;
 
     fn shutdown(self) -> Result<(), Self::Error>;
 
@@ -90,7 +90,7 @@ where
         self.backend.clone()
     }
 
-    pub fn drive(&mut self) -> Result<(), ArchiveError> {
+    pub fn drive(&self) -> Result<(), ArchiveError> {
         self.start_tx.send(())?;
         Ok(())
     }
@@ -113,7 +113,7 @@ where
 {
     type Error = ArchiveError;
 
-    fn drive(&mut self) -> Result<(), Self::Error> {
+    fn drive(&self) -> Result<(), Self::Error> {
         self.start_tx.send(())?;
         Ok(())
     }

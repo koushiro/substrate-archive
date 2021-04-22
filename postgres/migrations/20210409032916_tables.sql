@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS blocks (
     digest bytea NOT NULL,
     extrinsics bytea[] NOT NULL,
 
-    justifications jsonb,
+    justifications bytea,
 
 --     changes storage_ty[],
     changes jsonb NOT NULL,

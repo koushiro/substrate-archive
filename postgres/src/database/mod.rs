@@ -29,7 +29,7 @@ impl PostgresDb {
             .connect(config.uri())
             .await?;
         log::info!(target: "postgres", "Postgres configuration: {:?}", config);
-        Ok(Self { pool, config })
+        Ok(Self { config, pool })
     }
 
     pub fn config(&self) -> &PostgresConfig {

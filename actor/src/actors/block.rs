@@ -73,9 +73,9 @@ where
             self.curr_block = max + 1;
         } else {
             // `None` means that the blocks table is not populated yet
+            log::info!("Re-index from the genesis block");
             let genesis_block = self.genesis_block()?;
             self.metadata.send(genesis_block).await?;
-            log::info!("Re-index from the genesis block");
             self.curr_block = 1;
         }
         Ok(())
@@ -150,8 +150,10 @@ where
     ) -> <ReIndex as Message>::Result {
         match self.re_index().await {
             Ok(()) => {}
-            Err(ActorError::Disconnect(_)) => ctx.stop(),
-            Err(err) => log::error!("{}", err),
+            Err(err) => {
+                log::error!("{}", err);
+                ctx.stop();
+            }
         }
     }
 }
@@ -168,8 +170,10 @@ where
     async fn handle(&mut self, _: Crawl, ctx: &mut Context<Self>) -> <Crawl as Message>::Result {
         match self.crawl().await {
             Ok(()) => {}
-            Err(ActorError::Disconnect(_)) => ctx.stop(),
-            Err(err) => log::error!("{}", err),
+            Err(err) => {
+                log::error!("{}", err);
+                ctx.stop();
+            }
         }
     }
 }

@@ -16,7 +16,7 @@ file = { level = "DEBUG", path = "./archive.log" }
 
 # RocksDB backend configuration for archive client
 [client.rocksdb]
-path = "./rocksdb"
+path = "../polkadot/database/chains/polkadot/db"
 cache_size = 128
 secondary_db_path = "./rocksdb_secondary"
 
@@ -29,7 +29,7 @@ max_runtime_instances = 8
 # Archive postgres configuration #
 ##################################
 [postgres]
-uri = "postgres://postgres:123@localhost:5432/polkadot-archive"
+uri = "postgres://koushiro:123@localhost:5432/archive"
 min_connections = 2
 max_connections = 8
 connect_timeout = 10

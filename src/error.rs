@@ -13,5 +13,8 @@ pub enum ArchiveError {
     FlumeSend(#[from] flume::SendError<()>),
 
     #[error("{0}")]
+    Io(#[from] std::io::Error),
+
+    #[error("{0}")]
     Toml(#[from] toml::de::Error),
 }

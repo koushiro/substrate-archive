@@ -4,8 +4,8 @@ mod error;
 mod logger;
 
 pub use self::{
-    archive::*,
+    archive::{Archive, ArchiveSystem, ArchiveSystemBuilder},
     cli::{ArchiveCli, ArchiveConfig},
-    error::*,
+    error::ArchiveError,
     logger::{FileLoggerConfig, LoggerConfig},
 };

@@ -65,14 +65,15 @@ where
             Some(body) => body,
             None => return Ok(None),
         };
+        log::error!("id: {:?}, body: {}", id, hex::encode(body.as_slice()));
 
         match self.transaction_storage {
-            TransactionStorageMode::BlockBody => match Decode::decode(&mut body.as_ref()) {
+            TransactionStorageMode::BlockBody => match Decode::decode(&mut body.as_slice()) {
                 Ok(body) => Ok(Some(body)),
                 Err(err) => Err(backend_err(format!("Error decoding body: {}", err))),
             },
             TransactionStorageMode::StorageChain => {
-                match Vec::<ExtrinsicHeader>::decode(&mut body.as_ref()) {
+                match Vec::<ExtrinsicHeader>::decode(&mut body.as_slice()) {
                     Ok(index) => {
                         let extrinsics: BlockchainResult<Vec<Block::Extrinsic>> = index
                             .into_iter()
@@ -107,10 +108,10 @@ where
 
     fn justifications(&self, id: BlockId<Block>) -> BlockchainResult<Option<Justifications>> {
         match utils::read_db(&*self.db, columns::KEY_LOOKUP, columns::JUSTIFICATIONS, id)? {
-            Some(justification) => match Decode::decode(&mut justification.as_ref()) {
+            Some(justifications) => match Decode::decode(&mut justifications.as_slice()) {
                 Ok(justifications) => Ok(Some(justifications)),
                 Err(err) => Err(backend_err(format!(
-                    "Error decoding justification: {}",
+                    "Error decoding justifications: {}",
                     err
                 ))),
             },
@@ -128,8 +129,6 @@ where
 
     fn leaves(&self) -> BlockchainResult<Vec<Block::Hash>> {
         unimplemented!()
-        // LeafSet::read_from_db(&*self.db, columns::META, meta_keys::LEAF_PREFIX)
-        //     .map(|leaves| leaves.hashes())
     }
 
     fn children(&self, parent_hash: Block::Hash) -> BlockchainResult<Vec<Block::Hash>> {
@@ -143,6 +142,10 @@ where
 
     fn indexed_transaction(&self, hash: &Block::Hash) -> BlockchainResult<Option<Vec<u8>>> {
         Ok(self.db.get(columns::TRANSACTION, hash.as_ref()))
+    }
+
+    fn has_indexed_transaction(&self, hash: &Block::Hash) -> BlockchainResult<bool> {
+        Ok(self.db.contains(columns::TRANSACTION, hash.as_ref()))
     }
 }
 

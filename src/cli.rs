@@ -1,13 +1,12 @@
 use std::{fs, path::PathBuf};
 
-use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use structopt::StructOpt;
 
 use archive_actor::{KafkaConfig, PostgresConfig};
 use archive_client::ClientConfig;
 
-use crate::logger::LoggerConfig;
+use crate::{error::ArchiveError, logger::LoggerConfig};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ArchiveConfig {
@@ -26,7 +25,7 @@ pub struct ArchiveCli {
 }
 
 impl ArchiveCli {
-    pub fn init() -> Result<ArchiveConfig> {
+    pub fn init() -> Result<ArchiveConfig, ArchiveError> {
         let cli: Self = ArchiveCli::from_args();
         let toml_str = fs::read_to_string(cli.config.as_path())?;
         let config = toml::from_str::<ArchiveConfig>(toml_str.as_str())?;

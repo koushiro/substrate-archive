@@ -41,7 +41,7 @@ pub struct BackendConfig {
 impl Default for BackendConfig {
     fn default() -> Self {
         Self {
-            state_pruning: PruningMode::ArchiveCanonical,
+            state_pruning: PruningMode::ArchiveAll,
             transaction_storage: TransactionStorageMode::BlockBody,
         }
     }
