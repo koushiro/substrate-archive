@@ -1,13 +1,17 @@
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use xtra::prelude::*;
 
 use sc_client_api::{
-    backend::{Backend, StateBackendFor},
+    backend::{self, StateBackendFor},
     client::BlockBackend,
 };
 use sp_api::{ApiExt, BlockId, Core as CoreApi, ProvideRuntimeApi};
 use sp_runtime::traits::{Block as BlockT, Header as HeaderT, NumberFor};
+use sp_version::RuntimeVersion;
 
 use crate::{
     actors::{metadata::MetadataActor, postgres::PostgresActor},
@@ -16,27 +20,27 @@ use crate::{
     messages::{BlockMessage, Crawl, Die, MaxBlock, ReIndex},
 };
 
-pub struct BlockActor<Block, B, Api>
+pub struct BlockActor<Block, Backend, Api>
 where
     Block: BlockT,
 {
-    backend: Arc<B>,
+    backend: Arc<Backend>,
     api: Arc<Api>,
     metadata: Address<MetadataActor<Block>>,
     db: Address<PostgresActor<Block>>,
     curr_block: u32,
 }
 
-impl<Block, B, Api> BlockActor<Block, B, Api>
+impl<Block, Backend, Api> BlockActor<Block, Backend, Api>
 where
     Block: BlockT,
-    B: Backend<Block> + BlockBackend<Block>,
+    Backend: backend::Backend<Block> + BlockBackend<Block>,
     Api: ProvideRuntimeApi<Block>,
     <Api as ProvideRuntimeApi<Block>>::Api:
-        CoreApi<Block> + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
+        CoreApi<Block> + ApiExt<Block, StateBackend = StateBackendFor<Backend, Block>>,
 {
     pub fn new(
-        backend: Arc<B>,
+        backend: Arc<Backend>,
         api: Arc<Api>,
         metadata: Address<MetadataActor<Block>>,
         db: Address<PostgresActor<Block>>,
@@ -89,10 +93,22 @@ where
                 block.block.header().number(),
                 block.block.header().hash()
             );
+
             let api = self.api.runtime_api();
-            let runtime_version = api.version(&id)?;
+            let runtime_version: RuntimeVersion = api.version(&id)?;
+            log::debug!(
+                "Executing Block #{} ({}), version {}",
+                block.block.header().number(),
+                block.block.header().hash(),
+                runtime_version.spec_version
+            );
+
+            let now = Instant::now();
+            // Must re-construct a new runtime api for executing block.
+            let api = self.api.runtime_api();
             let executor = BlockExecutor::new(block.block.clone(), &self.backend, api);
             let changes = executor.into_storage_changes()?;
+            log::debug!("Took {:?} to execute block", now.elapsed());
 
             let message = BlockMessage {
                 spec_version: runtime_version.spec_version,
@@ -109,13 +125,13 @@ where
 }
 
 #[async_trait::async_trait]
-impl<Block, B, Api> Actor for BlockActor<Block, B, Api>
+impl<Block, Backend, Api> Actor for BlockActor<Block, Backend, Api>
 where
     Block: BlockT,
-    B: Backend<Block> + BlockBackend<Block> + 'static,
+    Backend: backend::Backend<Block> + BlockBackend<Block> + 'static,
     Api: ProvideRuntimeApi<Block> + Send + Sync + 'static,
     <Api as ProvideRuntimeApi<Block>>::Api:
-        CoreApi<Block> + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
+        CoreApi<Block> + ApiExt<Block, StateBackend = StateBackendFor<Backend, Block>>,
 {
     async fn started(&mut self, ctx: &mut Context<Self>) {
         // using this instead of notify_immediately because
@@ -135,13 +151,13 @@ where
 }
 
 #[async_trait::async_trait]
-impl<Block, B, Api> Handler<ReIndex> for BlockActor<Block, B, Api>
+impl<Block, Backend, Api> Handler<ReIndex> for BlockActor<Block, Backend, Api>
 where
     Block: BlockT,
-    B: Backend<Block> + BlockBackend<Block> + 'static,
+    Backend: backend::Backend<Block> + BlockBackend<Block> + 'static,
     Api: ProvideRuntimeApi<Block> + Send + Sync + 'static,
     <Api as ProvideRuntimeApi<Block>>::Api:
-        CoreApi<Block> + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
+        CoreApi<Block> + ApiExt<Block, StateBackend = StateBackendFor<Backend, Block>>,
 {
     async fn handle(
         &mut self,
@@ -159,13 +175,13 @@ where
 }
 
 #[async_trait::async_trait]
-impl<Block, B, Api> Handler<Crawl> for BlockActor<Block, B, Api>
+impl<Block, Backend, Api> Handler<Crawl> for BlockActor<Block, Backend, Api>
 where
     Block: BlockT,
-    B: Backend<Block> + BlockBackend<Block> + 'static,
+    Backend: backend::Backend<Block> + BlockBackend<Block> + 'static,
     Api: ProvideRuntimeApi<Block> + Send + Sync + 'static,
     <Api as ProvideRuntimeApi<Block>>::Api:
-        CoreApi<Block> + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
+        CoreApi<Block> + ApiExt<Block, StateBackend = StateBackendFor<Backend, Block>>,
 {
     async fn handle(&mut self, _: Crawl, ctx: &mut Context<Self>) -> <Crawl as Message>::Result {
         match self.crawl().await {
@@ -179,14 +195,13 @@ where
 }
 
 #[async_trait::async_trait]
-impl<Block, B, Api> Handler<Die> for BlockActor<Block, B, Api>
+impl<Block, Backend, Api> Handler<Die> for BlockActor<Block, Backend, Api>
 where
     Block: BlockT,
-    Api: Send + Sync,
-    B: Backend<Block> + BlockBackend<Block> + 'static,
+    Backend: backend::Backend<Block> + BlockBackend<Block> + 'static,
     Api: ProvideRuntimeApi<Block> + Send + Sync + 'static,
     <Api as ProvideRuntimeApi<Block>>::Api:
-        CoreApi<Block> + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
+        CoreApi<Block> + ApiExt<Block, StateBackend = StateBackendFor<Backend, Block>>,
 {
     async fn handle(&mut self, _: Die, ctx: &mut Context<Self>) -> <Die as Message>::Result {
         log::info!("Stopping Block Actor");

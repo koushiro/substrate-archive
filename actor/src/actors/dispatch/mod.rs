@@ -20,9 +20,9 @@ where
 {
 }
 
-pub struct DispatcherActor<B: BlockT> {
-    metadata_channels: HashMap<&'static str, Box<dyn StrongMessageChannel<MetadataMessage<B>>>>,
-    block_channels: HashMap<&'static str, Box<dyn StrongMessageChannel<BlockMessage<B>>>>,
+pub struct DispatcherActor<Block: BlockT> {
+    metadata_channels: HashMap<&'static str, Box<dyn StrongMessageChannel<MetadataMessage<Block>>>>,
+    block_channels: HashMap<&'static str, Box<dyn StrongMessageChannel<BlockMessage<Block>>>>,
     die_channels: HashMap<&'static str, Box<dyn StrongMessageChannel<Die>>>,
 }
 

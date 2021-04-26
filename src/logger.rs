@@ -69,6 +69,8 @@ impl LoggerConfig {
             .level_for("archive", self.console.level)
             .level_for("sqlx", log::LevelFilter::Error)
             .level_for("frame_executive", log::LevelFilter::Error)
+            .level_for("cranelift_codegen", log::LevelFilter::Warn)
+            .level_for("cranelift_wasm", log::LevelFilter::Warn)
             .format(move |out, message, record| {
                 out.finish(format_args!(
                     "{} [{}] {}: {}",
@@ -92,6 +94,8 @@ impl LoggerConfig {
                 .level_for("archive", file.level)
                 .level_for("sqlx", log::LevelFilter::Error)
                 .level_for("frame_executive", log::LevelFilter::Error)
+                .level_for("cranelift_codegen", log::LevelFilter::Warn)
+                .level_for("cranelift_wasm", log::LevelFilter::Warn)
                 .format(move |out, message, record| {
                     out.finish(format_args!(
                         "{} [{}] [{};{}] {}: {}",

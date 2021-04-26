@@ -152,6 +152,7 @@ where
         }
     }
 
+    #[allow(clippy::type_complexity)]
     pub fn build(
         self,
     ) -> Result<ArchiveSystem<Block, ArchiveClient<Block, Executor, RA>, RA>, ArchiveError> {

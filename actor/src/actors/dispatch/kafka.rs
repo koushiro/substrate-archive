@@ -6,9 +6,9 @@ use archive_kafka::{BlockPayload, KafkaConfig, KafkaError, KafkaProducer, Metada
 
 use crate::messages::{BlockMessage, Die, MetadataMessage};
 
-pub struct KafkaActor<B: BlockT> {
+pub struct KafkaActor<Block: BlockT> {
     producer: KafkaProducer,
-    _marker: std::marker::PhantomData<B>,
+    _marker: std::marker::PhantomData<Block>,
 }
 
 impl<B: BlockT> KafkaActor<B> {
@@ -22,15 +22,15 @@ impl<B: BlockT> KafkaActor<B> {
 }
 
 #[async_trait::async_trait]
-impl<B: BlockT> Actor for KafkaActor<B> {}
+impl<Block: BlockT> Actor for KafkaActor<Block> {}
 
 #[async_trait::async_trait]
-impl<B: BlockT> Handler<MetadataMessage<B>> for KafkaActor<B> {
+impl<Block: BlockT> Handler<MetadataMessage<Block>> for KafkaActor<Block> {
     async fn handle(
         &mut self,
-        message: MetadataMessage<B>,
+        message: MetadataMessage<Block>,
         _: &mut Context<Self>,
-    ) -> <MetadataMessage<B> as Message>::Result {
+    ) -> <MetadataMessage<Block> as Message>::Result {
         let payload = MetadataPayload::from(message);
         if let Err(err) = self.producer.send(payload).await {
             log::error!("{}", err);
@@ -39,12 +39,12 @@ impl<B: BlockT> Handler<MetadataMessage<B>> for KafkaActor<B> {
 }
 
 #[async_trait::async_trait]
-impl<B: BlockT> Handler<BlockMessage<B>> for KafkaActor<B> {
+impl<Block: BlockT> Handler<BlockMessage<Block>> for KafkaActor<Block> {
     async fn handle(
         &mut self,
-        message: BlockMessage<B>,
+        message: BlockMessage<Block>,
         _: &mut Context<Self>,
-    ) -> <BlockMessage<B> as Message>::Result {
+    ) -> <BlockMessage<Block> as Message>::Result {
         let payload = BlockPayload::from(message);
         if let Err(err) = self.producer.send(payload).await {
             log::error!("{}", err);
@@ -53,7 +53,7 @@ impl<B: BlockT> Handler<BlockMessage<B>> for KafkaActor<B> {
 }
 
 #[async_trait::async_trait]
-impl<B: BlockT> Handler<Die> for KafkaActor<B> {
+impl<Block: BlockT> Handler<Die> for KafkaActor<Block> {
     async fn handle(&mut self, _message: Die, ctx: &mut Context<Self>) -> <Die as Message>::Result {
         log::info!("Stopping Kafka Actor");
         ctx.stop();

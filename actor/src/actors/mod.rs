@@ -8,7 +8,7 @@ use std::sync::Arc;
 use xtra::{prelude::*, spawn::TokioGlobalSpawnExt};
 
 use sc_client_api::{
-    backend::{Backend, StateBackendFor},
+    backend::{self, StateBackendFor},
     client::BlockBackend,
 };
 use sp_api::{ApiExt, Core as CoreApi, Metadata as MetadataApi, ProvideRuntimeApi};
@@ -27,28 +27,28 @@ use crate::{config::ActorConfig, error::ActorError, messages::*};
 ///                                               └────►│  ...  │
 ///                                                     └───────┘
 ///
-pub struct Actors<Block, B, Api>
+pub struct Actors<Block, Backend, Api>
 where
     Block: BlockT,
-    B: Backend<Block> + BlockBackend<Block> + 'static,
+    Backend: backend::Backend<Block> + BlockBackend<Block> + 'static,
     Api: ProvideRuntimeApi<Block> + Send + Sync + 'static,
     <Api as ProvideRuntimeApi<Block>>::Api: CoreApi<Block>
         + MetadataApi<Block>
-        + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
+        + ApiExt<Block, StateBackend = StateBackendFor<Backend, Block>>,
 {
     db: Address<postgres::PostgresActor<Block>>,
     metadata: Address<metadata::MetadataActor<Block>>,
-    block: Address<block::BlockActor<Block, B, Api>>,
+    block: Address<block::BlockActor<Block, Backend, Api>>,
 }
 
-impl<Block, B, Api> Actors<Block, B, Api>
+impl<Block, Backend, Api> Actors<Block, Backend, Api>
 where
     Block: BlockT,
-    B: Backend<Block> + BlockBackend<Block> + 'static,
+    Backend: backend::Backend<Block> + BlockBackend<Block> + 'static,
     Api: ProvideRuntimeApi<Block> + Send + Sync + 'static,
     <Api as ProvideRuntimeApi<Block>>::Api: CoreApi<Block>
         + MetadataApi<Block>
-        + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
+        + ApiExt<Block, StateBackend = StateBackendFor<Backend, Block>>,
 {
     async fn spawn_db(
         config: ActorConfig,
@@ -66,7 +66,7 @@ where
     }
 
     pub async fn spawn(
-        backend: Arc<B>,
+        backend: Arc<Backend>,
         api: Arc<Api>,
         config: ActorConfig,
     ) -> Result<Self, ActorError> {

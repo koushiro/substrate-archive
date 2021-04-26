@@ -47,7 +47,7 @@ impl<Block: BlockT> PostgresActor<Block> {
 }
 
 #[async_trait::async_trait]
-impl<B: BlockT> Actor for PostgresActor<B> {}
+impl<Block: BlockT> Actor for PostgresActor<Block> {}
 
 #[async_trait::async_trait]
 impl<Block: BlockT> Handler<MetadataMessage<Block>> for PostgresActor<Block> {

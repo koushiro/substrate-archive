@@ -65,7 +65,7 @@ where
             Some(body) => body,
             None => return Ok(None),
         };
-        log::error!("id: {:?}, body: {}", id, hex::encode(body.as_slice()));
+        // log::info!("id: {:?}, body: {}", id, hex::encode(body.as_slice()));
 
         match self.transaction_storage {
             TransactionStorageMode::BlockBody => match Decode::decode(&mut body.as_slice()) {

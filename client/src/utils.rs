@@ -121,7 +121,7 @@ pub fn read_header<Block: BlockT>(
 ) -> Result<Option<Block::Header>, BlockchainError> {
     match read_db(db, col_index, col, id)? {
         Some(header) => {
-            log::info!("id: {:?}, header: {}", id, hex::encode(header.as_slice()));
+            // log::info!("id: {:?}, header: {}", id, hex::encode(header.as_slice()));
             match Block::Header::decode(&mut header.as_slice()) {
                 Ok(header) => Ok(Some(header)),
                 Err(_) => Err(backend_err("Error decoding header")),

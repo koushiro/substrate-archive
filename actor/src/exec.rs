@@ -26,7 +26,6 @@ pub struct BlockExecutor<'a, Block, B, Api>
 where
     Block: BlockT,
 {
-    id: BlockId<Block>,
     block: Block,
     backend: &'a Arc<B>,
     api: ApiRef<'a, Api>,
@@ -39,10 +38,7 @@ where
     Api: CoreApi<Block> + ApiExt<Block, StateBackend = StateBackendFor<B, Block>>,
 {
     pub fn new(block: Block, backend: &'a Arc<B>, api: ApiRef<'a, Api>) -> Self {
-        let parent_hash = block.header().parent_hash();
-        let id = BlockId::Hash(*parent_hash);
         Self {
-            id,
             block,
             backend,
             api,
@@ -51,7 +47,8 @@ where
 
     pub fn into_storage_changes(self) -> Result<StorageChanges, BlockchainError> {
         let parent_hash = *self.block.header().parent_hash();
-        let state = self.backend.state_at(self.id)?;
+        let parent_block_id = BlockId::Hash(parent_hash);
+        let state = self.backend.state_at(parent_block_id)?;
 
         // FIXME: ????
         // Wasm runtime calculates a different number of digest items
@@ -59,11 +56,15 @@ where
         // We don't do anything with consensus
         // so digest isn't very important (we don't currently index digest items anyway)
         // popping a digest item has no effect on storage changes afaik
-        // let (mut header, ext) = self.block.deconstruct();
-        // header.digest_mut().pop();
-        // let block = Block::new(header, ext);
+        let (mut header, ext) = self.block.deconstruct();
+        // log::info!(
+        //     "Execute block #{} into storage, id = {:?}, hash={:?}, parent_hash={:?}, digest={:?}, state_root={:?}, extrinsic_root={:?}",
+        //     header.number(), parent_block_id, header.hash(), parent_hash, header.digest(), header.state_root(), header.extrinsics_root()
+        // );
+        header.digest_mut().pop();
+        let block = Block::new(header, ext);
 
-        self.api.execute_block(&self.id, self.block)?;
+        self.api.execute_block(&parent_block_id, block)?;
         let storage_changes = self
             .api
             .into_storage_changes(&state, None, parent_hash)
