@@ -1,4 +1,7 @@
+use std::{path::PathBuf, sync::Arc};
+
 use codec::Decode;
+use sc_client_api::BlockBackend;
 use sc_executor::{WasmExecutionMethod, WasmExecutor};
 use sc_executor_common::error::WasmError;
 use sp_core::{
@@ -6,14 +9,58 @@ use sp_core::{
     Bytes, OpaqueMetadata,
 };
 use sp_externalities::ExternalitiesExt;
+use sp_runtime::{
+    generic::{self, BlockId},
+    traits::BlakeTwo256,
+    OpaqueExtrinsic,
+};
 use sp_runtime_interface::with_externalities;
 use sp_state_machine::BasicExternalities;
 use sp_version::RuntimeVersion;
 use sp_wasm_interface::HostFunctions;
 
+use archive_client::{ArchiveBackend, RocksDbConfig, SecondaryRocksDb};
+
+/// The block number type used by Polkadot.
+/// 32-bits will allow for 136 years of blocks assuming 1 block per second.
+pub type BlockNumber = u32;
+/// Header type.
+pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
+/// Opaque, encoded, unchecked extrinsic.
+pub type UncheckedExtrinsic = OpaqueExtrinsic;
+/// Block type.
+pub type Block = generic::Block<Header, UncheckedExtrinsic>;
+
 fn main() {
     env_logger::init();
 
+    let db = SecondaryRocksDb::open(RocksDbConfig {
+        path: {
+            let mut path = PathBuf::new();
+            path.push("../../polkadot/database/chains/polkadot/db");
+            path
+        },
+        cache_size: 128,
+        secondary_db_path: {
+            let mut path = PathBuf::new();
+            path.push("./rocksdb_secondary");
+            path
+        },
+    })
+    .unwrap();
+    let backend = ArchiveBackend::<Block>::new(Arc::new(db), Default::default()).unwrap();
+    let block = backend.block(&BlockId::Number(512u32.into())).unwrap();
+    log::info!("Block #512: {:?}", block);
+
+    let justifications = backend
+        .justifications(&BlockId::Number(512u32.into()))
+        .unwrap();
+    log::info!("Block #512 Justifications: {:?}", justifications);
+
+    // print_runtime_info();
+}
+
+fn print_runtime_info() {
     let funcs = sp_io::SubstrateHostFunctions::host_functions()
         .into_iter()
         .collect::<Vec<_>>();

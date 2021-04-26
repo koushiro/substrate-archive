@@ -57,7 +57,7 @@ impl<Block: BlockT> Handler<MetadataMessage<Block>> for PostgresActor<Block> {
         _ctx: &mut Context<Self>,
     ) -> <MetadataMessage<Block> as Message>::Result {
         if let Err(err) = self.metadata_handler(message).await {
-            log::error!("{}", err);
+            log::error!(target: "actor", "{}", err);
         }
     }
 }
@@ -70,7 +70,7 @@ impl<Block: BlockT> Handler<BlockMessage<Block>> for PostgresActor<Block> {
         _ctx: &mut Context<Self>,
     ) -> <BlockMessage<Block> as Message>::Result {
         if let Err(err) = self.block_handler(message).await {
-            log::error!("{}", err);
+            log::error!(target: "actor", "{}", err);
         }
     }
 }
@@ -85,7 +85,7 @@ impl<Block: BlockT> Handler<CheckIfMetadataExist> for PostgresActor<Block> {
         match self.db.check_if_metadata_exists(message.spec_version).await {
             Ok(does_exist) => does_exist,
             Err(err) => {
-                log::error!("{}", err);
+                log::error!(target: "actor", "{}", err);
                 false
             }
         }
@@ -102,7 +102,7 @@ impl<Block: BlockT> Handler<MaxBlock> for PostgresActor<Block> {
         match self.db.max_block_num().await {
             Ok(num) => num,
             Err(err) => {
-                log::error!("{}", err);
+                log::error!(target: "actor", "{}", err);
                 None
             }
         }
@@ -112,9 +112,9 @@ impl<Block: BlockT> Handler<MaxBlock> for PostgresActor<Block> {
 #[async_trait::async_trait]
 impl<Block: BlockT> Handler<Die> for PostgresActor<Block> {
     async fn handle(&mut self, message: Die, ctx: &mut Context<Self>) -> <Die as Message>::Result {
-        log::info!("Stopping Postgres Actor");
+        log::info!(target: "actor", "Stopping Postgres Actor");
         if let Err(err) = self.dispatcher.send(message).await {
-            log::error!("{}", err);
+            log::error!(target: "actor", "{}", err);
         }
         ctx.stop();
     }

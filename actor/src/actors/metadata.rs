@@ -49,6 +49,7 @@ where
         let is_exist = self.db.send(CheckIfMetadataExist { spec_version }).await?;
         if !is_exist {
             log::info!(
+                target: "actor",
                 "Getting metadata, version = {}, block_num = {}, block_hash = {}",
                 spec_version,
                 block_num,
@@ -94,7 +95,7 @@ where
         _: &mut Context<Self>,
     ) -> <BlockMessage<Block> as Message>::Result {
         if let Err(err) = self.block_handler(message).await {
-            log::error!("{}", err);
+            log::error!(target: "actor", "{}", err);
         }
     }
 }
@@ -105,7 +106,7 @@ where
     Block: BlockT,
 {
     async fn handle(&mut self, _: Die, ctx: &mut Context<Self>) -> <Die as Message>::Result {
-        log::info!("Stopping Metadata Actor");
+        log::info!(target: "actor", "Stopping Metadata Actor");
         ctx.stop();
     }
 }

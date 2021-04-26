@@ -33,7 +33,7 @@ impl<Block: BlockT> Handler<MetadataMessage<Block>> for KafkaActor<Block> {
     ) -> <MetadataMessage<Block> as Message>::Result {
         let payload = MetadataPayload::from(message);
         if let Err(err) = self.producer.send(payload).await {
-            log::error!("{}", err);
+            log::error!(target: "actor", "{}", err);
         }
     }
 }
@@ -47,7 +47,7 @@ impl<Block: BlockT> Handler<BlockMessage<Block>> for KafkaActor<Block> {
     ) -> <BlockMessage<Block> as Message>::Result {
         let payload = BlockPayload::from(message);
         if let Err(err) = self.producer.send(payload).await {
-            log::error!("{}", err);
+            log::error!(target: "actor", "{}", err);
         }
     }
 }
@@ -55,7 +55,7 @@ impl<Block: BlockT> Handler<BlockMessage<Block>> for KafkaActor<Block> {
 #[async_trait::async_trait]
 impl<Block: BlockT> Handler<Die> for KafkaActor<Block> {
     async fn handle(&mut self, _message: Die, ctx: &mut Context<Self>) -> <Die as Message>::Result {
-        log::info!("Stopping Kafka Actor");
+        log::info!(target: "actor", "Stopping Kafka Actor");
         ctx.stop();
     }
 }

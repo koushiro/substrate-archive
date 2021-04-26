@@ -182,6 +182,7 @@ where
         let last_finalized_block = client.backend().blockchain().last_finalized()?;
         let rt = client.runtime_version(&BlockId::Hash(last_finalized_block))?;
         log::info!(
+            target: "archive",
             "Running archive for 🔗 `{}`, implementation `{}`. Latest known runtime version: {}. Latest finalized block {} 🛡️",
             rt.spec_name,
             rt.impl_name,
@@ -193,6 +194,7 @@ where
         if let Some(new_limit) = fdlimit::raise_fd_limit() {
             if new_limit < RECOMMENDED_OPEN_FILE_DESCRIPTOR_LIMIT {
                 log::warn!(
+                    target: "archive",
                     "⚠️  Low open file descriptor limit configured for the process. \
                      Current value: {:?}, recommended value: {:?}.",
                     new_limit,

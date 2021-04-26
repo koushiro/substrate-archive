@@ -109,7 +109,7 @@ where
         _block: BlockId<Block>,
         _justification: Option<Justification>,
     ) -> BlockchainResult<()> {
-        log::warn!("finalize block operations are not supported for read-only backend");
+        log::warn!("Finalize block operations are not supported for read-only backend");
         Ok(())
     }
 
@@ -118,7 +118,7 @@ where
         _block: BlockId<Block>,
         _justification: Justification,
     ) -> BlockchainResult<()> {
-        log::warn!("append justification operations are not supported for read-only backend");
+        log::warn!("Append justification operations are not supported for read-only backend");
         Ok(())
     }
 

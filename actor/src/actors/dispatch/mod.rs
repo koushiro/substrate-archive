@@ -46,6 +46,7 @@ impl<Block: BlockT> DispatcherActor<Block> {
     async fn dispatch_metadata(&self, message: MetadataMessage<Block>) -> Result<(), Disconnected> {
         for (name, dispatcher) in &self.metadata_channels {
             log::debug!(
+                target: "actor",
                 "Dispatch `Metadata` message into `{}`, version = {}",
                 name,
                 message.spec_version
@@ -58,6 +59,7 @@ impl<Block: BlockT> DispatcherActor<Block> {
     async fn dispatch_block(&self, message: BlockMessage<Block>) -> Result<(), Disconnected> {
         for (name, dispatcher) in &self.block_channels {
             log::debug!(
+                target: "actor",
                 "Dispatch `Block` message into `{}`, height = {}",
                 name,
                 message.inner.block.header().number()
@@ -69,7 +71,7 @@ impl<Block: BlockT> DispatcherActor<Block> {
 
     async fn dispatch_die(&self, message: Die) -> Result<(), Disconnected> {
         for (name, dispatcher) in &self.die_channels {
-            log::debug!("Dispatch `Die` message into `{}`", name);
+            log::debug!(target: "actor", "Dispatch `Die` message into `{}`", name);
             dispatcher.send(message).await?;
         }
         Ok(())
@@ -87,7 +89,7 @@ impl<Block: BlockT> Handler<MetadataMessage<Block>> for DispatcherActor<Block> {
         _ctx: &mut Context<Self>,
     ) -> <MetadataMessage<Block> as Message>::Result {
         if let Err(err) = self.dispatch_metadata(message).await {
-            log::error!("{}", err);
+            log::error!(target: "actor", "{}", err);
         }
     }
 }
@@ -100,7 +102,7 @@ impl<Block: BlockT> Handler<BlockMessage<Block>> for DispatcherActor<Block> {
         _ctx: &mut Context<Self>,
     ) -> <BlockMessage<Block> as Message>::Result {
         if let Err(err) = self.dispatch_block(message).await {
-            log::error!("{}", err);
+            log::error!(target: "actor", "{}", err);
         }
     }
 }
@@ -108,9 +110,9 @@ impl<Block: BlockT> Handler<BlockMessage<Block>> for DispatcherActor<Block> {
 #[async_trait::async_trait]
 impl<Block: BlockT> Handler<Die> for DispatcherActor<Block> {
     async fn handle(&mut self, message: Die, ctx: &mut Context<Self>) -> <Die as Message>::Result {
-        log::info!("Stopping Dispatcher Actor");
+        log::info!(target: "actor", "Stopping Dispatcher Actor");
         if let Err(err) = self.dispatch_die(message).await {
-            log::error!("{}", err);
+            log::error!(target: "actor", "{}", err);
         }
         ctx.stop();
     }

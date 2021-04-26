@@ -73,11 +73,11 @@ where
 
     async fn re_index(&mut self) -> Result<(), ActorError> {
         if let Some(max) = self.db.send(MaxBlock).await? {
-            log::info!("Re-index from the block #{}", max);
+            log::info!(target: "actor", "Re-index from the block #{}", max);
             self.curr_block = max + 1;
         } else {
             // `None` means that the blocks table is not populated yet
-            log::info!("Re-index from the genesis block");
+            log::info!(target: "actor", "Re-index from the genesis block");
             let genesis_block = self.genesis_block()?;
             self.metadata.send(genesis_block).await?;
             self.curr_block = 1;
@@ -85,10 +85,11 @@ where
         Ok(())
     }
 
-    async fn crawl(&self) -> Result<(), ActorError> {
+    async fn crawl(&mut self) -> Result<(), ActorError> {
         let id = BlockId::Number(self.curr_block.into());
         if let Some(block) = self.backend.block(&id)? {
             log::info!(
+                target: "actor",
                 "Crawl block {}, hash = {}",
                 block.block.header().number(),
                 block.block.header().hash()
@@ -97,6 +98,7 @@ where
             let api = self.api.runtime_api();
             let runtime_version: RuntimeVersion = api.version(&id)?;
             log::debug!(
+                target: "actor",
                 "Executing Block #{} ({}), version {}",
                 block.block.header().number(),
                 block.block.header().hash(),
@@ -108,7 +110,7 @@ where
             let api = self.api.runtime_api();
             let executor = BlockExecutor::new(block.block.clone(), &self.backend, api);
             let changes = executor.into_storage_changes()?;
-            log::debug!("Took {:?} to execute block", now.elapsed());
+            log::debug!(target: "actor", "Took {:?} to execute block", now.elapsed());
 
             let message = BlockMessage {
                 spec_version: runtime_version.spec_version,
@@ -116,6 +118,7 @@ where
                 changes: changes.main_storage_changes,
             };
             self.metadata.send(message).await?;
+            self.curr_block += 1;
             Ok(())
         } else {
             tokio::time::sleep(Duration::from_secs(1)).await;
@@ -142,7 +145,7 @@ where
         tokio::task::spawn(async move {
             loop {
                 if addr.send(Crawl).await.is_err() {
-                    log::error!("Crawl block error");
+                    log::error!(target: "actor", "Crawl block error");
                     break;
                 }
             }
@@ -167,7 +170,7 @@ where
         match self.re_index().await {
             Ok(()) => {}
             Err(err) => {
-                log::error!("{}", err);
+                log::error!(target: "actor", "{}", err);
                 ctx.stop();
             }
         }
@@ -187,7 +190,7 @@ where
         match self.crawl().await {
             Ok(()) => {}
             Err(err) => {
-                log::error!("{}", err);
+                log::error!(target: "actor", "{}", err);
                 ctx.stop();
             }
         }
@@ -204,7 +207,7 @@ where
         CoreApi<Block> + ApiExt<Block, StateBackend = StateBackendFor<Backend, Block>>,
 {
     async fn handle(&mut self, _: Die, ctx: &mut Context<Self>) -> <Die as Message>::Result {
-        log::info!("Stopping Block Actor");
+        log::info!(target: "actor", "Stopping Block Actor");
         ctx.stop();
     }
 }

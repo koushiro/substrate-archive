@@ -68,6 +68,10 @@ impl LoggerConfig {
             .level(self.console.level)
             .level_for("archive", self.console.level)
             .level_for("sqlx", log::LevelFilter::Error)
+            // disable the debug log of `digest_mut` method in the `sp_runtime::generic::Header`
+            .level_for("header", log::LevelFilter::Info)
+            // disable the debug log of runtime
+            .level_for("runtime", log::LevelFilter::Info)
             .level_for("frame_executive", log::LevelFilter::Error)
             .level_for("cranelift_codegen", log::LevelFilter::Warn)
             .level_for("cranelift_wasm", log::LevelFilter::Warn)
@@ -93,6 +97,10 @@ impl LoggerConfig {
                 .level(file.level)
                 .level_for("archive", file.level)
                 .level_for("sqlx", log::LevelFilter::Error)
+                // disable the debug log of `digest_mut` method in the `sp_runtime::generic::Header`
+                .level_for("header", log::LevelFilter::Info)
+                // disable the debug log of runtime
+                .level_for("runtime", log::LevelFilter::Info)
                 .level_for("frame_executive", log::LevelFilter::Error)
                 .level_for("cranelift_codegen", log::LevelFilter::Warn)
                 .level_for("cranelift_wasm", log::LevelFilter::Warn)

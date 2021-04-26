@@ -12,7 +12,7 @@ use sp_database::Database;
 use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, Header as HeaderT, NumberFor},
-    Justifications,
+    Justification, Justifications,
 };
 
 use crate::{
@@ -65,7 +65,6 @@ where
             Some(body) => body,
             None => return Ok(None),
         };
-        // log::info!("id: {:?}, body: {}", id, hex::encode(body.as_slice()));
 
         match self.transaction_storage {
             TransactionStorageMode::BlockBody => match Decode::decode(&mut body.as_slice()) {
@@ -108,12 +107,19 @@ where
 
     fn justifications(&self, id: BlockId<Block>) -> BlockchainResult<Option<Justifications>> {
         match utils::read_db(&*self.db, columns::KEY_LOOKUP, columns::JUSTIFICATIONS, id)? {
-            Some(justifications) => match Decode::decode(&mut justifications.as_slice()) {
-                Ok(justifications) => Ok(Some(justifications)),
-                Err(err) => Err(backend_err(format!(
-                    "Error decoding justifications: {}",
-                    err
-                ))),
+            Some(justifications) => match Justification::decode(&mut justifications.as_slice()) {
+                Ok(justification) => Ok(Some(justification.into())),
+                Err(_) => {
+                    // Storing multiple Justifications per block, https://github.com/paritytech/substrate/pull/7640
+                    log::debug!(target: "client", "There are multiple justifications in the block: {}", id);
+                    match Justifications::decode(&mut justifications.as_slice()) {
+                        Ok(justifications) => Ok(Some(justifications)),
+                        Err(err) => Err(backend_err(format!(
+                            "Error decoding justifications: {}",
+                            err
+                        ))),
+                    }
+                }
             },
             None => Ok(None),
         }

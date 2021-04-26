@@ -3,22 +3,9 @@ use std::sync::{
     Arc,
 };
 
-use sc_executor::native_executor_instance;
-use sp_runtime::{generic, traits::BlakeTwo256, OpaqueExtrinsic};
+use archive::{ArchiveCli, ArchiveError, ArchiveSystemBuilder, Block};
 
-use archive::{ArchiveCli, ArchiveError, ArchiveSystemBuilder};
-
-/// The block number type used by Polkadot.
-/// 32-bits will allow for 136 years of blocks assuming 1 block per second.
-pub type BlockNumber = u32;
-/// Header type.
-pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
-/// Opaque, encoded, unchecked extrinsic.
-pub type UncheckedExtrinsic = OpaqueExtrinsic;
-/// Block type.
-pub type Block = generic::Block<Header, UncheckedExtrinsic>;
-
-native_executor_instance!(
+sc_executor::native_executor_instance!(
     pub PolkadotExecutor,
     polkadot_runtime::api::dispatch,
     polkadot_runtime::native_version,
@@ -30,7 +17,7 @@ type PolkadotArchiveSystemBuilder =
 
 fn main() -> Result<(), ArchiveError> {
     let config = ArchiveCli::init()?;
-    log::info!("{:#?}", config);
+    log::info!(target: "archive", "{:#?}", config);
 
     let archive = PolkadotArchiveSystemBuilder::with_config(config).build()?;
     archive.drive()?;

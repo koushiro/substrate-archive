@@ -57,10 +57,6 @@ where
         // so digest isn't very important (we don't currently index digest items anyway)
         // popping a digest item has no effect on storage changes afaik
         let (mut header, ext) = self.block.deconstruct();
-        // log::info!(
-        //     "Execute block #{} into storage, id = {:?}, hash={:?}, parent_hash={:?}, digest={:?}, state_root={:?}, extrinsic_root={:?}",
-        //     header.number(), parent_block_id, header.hash(), parent_hash, header.digest(), header.state_root(), header.extrinsics_root()
-        // );
         header.digest_mut().pop();
         let block = Block::new(header, ext);
 

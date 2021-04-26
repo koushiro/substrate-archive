@@ -12,9 +12,9 @@ use crate::{columns, utils::NUM_COLUMNS};
 /// Secondary rocksdb configuration.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RocksDbConfig {
-    path: PathBuf,
-    cache_size: usize,
-    secondary_db_path: PathBuf,
+    pub path: PathBuf,
+    pub cache_size: usize,
+    pub secondary_db_path: PathBuf,
 }
 
 pub struct SecondaryRocksDb(Database);
@@ -49,6 +49,7 @@ impl SecondaryRocksDb {
             }
         }
         log::info!(
+            target: "client",
             "Open RocksDB database at {}, state column budget: {} MiB, others({}) column cache: {} MiB",
             path,
             state_col_budget,
@@ -67,12 +68,12 @@ impl SecondaryRocksDb {
         match self.0.get(col, key) {
             Ok(value) => value,
             Err(err) => {
-                log::debug!("{}, Catching up with primary and trying again...", err);
+                log::debug!(target: "client", "{}, Catching up with primary and trying again...", err);
                 self.0.try_catch_up_with_primary().ok()?;
                 match self.0.get(col, key) {
                     Ok(value) => value,
                     Err(err) => {
-                        log::error!("{}", err);
+                        log::error!(target: "client", "{}", err);
                         None
                     }
                 }

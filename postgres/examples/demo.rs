@@ -26,7 +26,7 @@ async fn main() -> Result<(), SqlxError> {
     let _ = db.insert(metadata).await?;
 
     let does_exist = db.check_if_metadata_exists(0).await?;
-    log::info!("metadata {} exists: {}", 0, does_exist);
+    log::info!("Metadata {} exists: {}", 0, does_exist);
 
     for i in 0..950 {
         let block = BlockModel {
@@ -45,7 +45,7 @@ async fn main() -> Result<(), SqlxError> {
     }
 
     let max_block_num = db.max_block_num().await?;
-    log::info!("max block num: {:?}", max_block_num);
+    log::info!("Max block num: {:?}", max_block_num);
 
     Ok(())
 }

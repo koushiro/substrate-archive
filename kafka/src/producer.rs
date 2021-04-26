@@ -54,7 +54,7 @@ impl KafkaProducer {
             Ok(result) => {
                 log::info!(
                     target: "kafka",
-                    "topic: {}, partition: {}, offset: {}",
+                    "Topic: {}, partition: {}, offset: {}",
                     topic, result.0, result.1
                 );
                 Ok(())
@@ -62,7 +62,7 @@ impl KafkaProducer {
             Err(err) => {
                 log::error!(
                     target: "kafka",
-                    "topic: {}, error: {}, msg: {:?}",
+                    "Topic: {}, error: {}, msg: {:?}",
                     topic, err.0, err.1
                 );
                 Err(err.0)
