@@ -90,7 +90,7 @@ where
         if let Some(block) = self.backend.block(&id)? {
             log::info!(
                 target: "actor",
-                "Crawl block {}, hash = {}",
+                "Crawl block #{}, hash = {:?}",
                 block.block.header().number(),
                 block.block.header().hash()
             );

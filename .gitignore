@@ -1,3 +1,4 @@
 /target
 /.idea
-*.log
+**/*.log
+**/rocksdb_secondary
