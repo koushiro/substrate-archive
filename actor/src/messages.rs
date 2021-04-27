@@ -35,7 +35,7 @@ impl<Block: BlockT> From<MetadataMessage<Block>> for archive_kafka::MetadataPayl
             spec_version: metadata.spec_version,
             block_num: metadata.block_num,
             block_hash: metadata.block_hash,
-            meta: metadata.meta,
+            meta: metadata.meta.into(),
         }
     }
 }

@@ -1,5 +1,6 @@
 use serde::Serialize;
 
+use sp_core::Bytes;
 use sp_runtime::{
     generic::Digest,
     traits::{Block as BlockT, Header as HeaderT},
@@ -12,8 +13,7 @@ pub struct MetadataPayload<Block: BlockT> {
     pub spec_version: u32,
     pub block_num: <Block::Header as HeaderT>::Number,
     pub block_hash: <Block::Header as HeaderT>::Hash,
-    #[serde(with = "serde_bytes")]
-    pub meta: Vec<u8>,
+    pub meta: Bytes,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -38,7 +38,7 @@ pub struct MetadataPayloadForDemo {
     pub spec_version: u32,
     pub block_num: u32,
     pub block_hash: String,
-    pub meta: String,
+    pub meta: Bytes,
 }
 
 // only for example `demo`

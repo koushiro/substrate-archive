@@ -29,7 +29,7 @@ async fn main() -> Result<(), KafkaError> {
         spec_version: 0,
         block_num: 0,
         block_hash: "0x00".into(),
-        meta: "0x0102030405".into(),
+        meta: vec![1, 2, 3, 4, 5].into(),
     };
     producer.send(metadata).await?;
 
