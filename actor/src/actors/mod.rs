@@ -14,7 +14,11 @@ use sc_client_api::{
 use sp_api::{ApiExt, Core as CoreApi, Metadata as MetadataApi, ProvideRuntimeApi};
 use sp_runtime::traits::Block as BlockT;
 
-use crate::{config::ActorConfig, error::ActorError, messages::*};
+use crate::{
+    config::{ActorConfig, DispatcherConfig},
+    error::ActorError,
+    messages::*,
+};
 
 /// The direction of data flow:
 ///                                                     ┌───────┐
@@ -50,19 +54,15 @@ where
         + MetadataApi<Block>
         + ApiExt<Block, StateBackend = StateBackendFor<Backend, Block>>,
 {
-    async fn spawn_db(
-        config: ActorConfig,
-    ) -> Result<Address<postgres::PostgresActor<Block>>, ActorError> {
+    fn spawn_dispatcher(
+        config: DispatcherConfig,
+    ) -> Result<Address<dispatch::DispatcherActor<Block>>, ActorError> {
         let mut dispatcher = dispatch::DispatcherActor::new();
-        if let Some(config) = config.dispatcher.kafka {
+        if let Some(config) = config.kafka {
             dispatcher = dispatcher.add("kafka", dispatch::kafka::KafkaActor::new(config)?);
         }
         let dispatcher = dispatcher.create(None).spawn_global();
-        let db = postgres::PostgresActor::new(config.postgres, dispatcher)
-            .await?
-            .create(None)
-            .spawn_global();
-        Ok(db)
+        Ok(dispatcher)
     }
 
     pub async fn spawn(
@@ -70,14 +70,19 @@ where
         api: Arc<Api>,
         config: ActorConfig,
     ) -> Result<Self, ActorError> {
-        let db = Self::spawn_db(config).await?;
+        let dispatcher = Self::spawn_dispatcher(config.dispatcher)?;
+        let db = postgres::PostgresActor::new(config.postgres, dispatcher)
+            .await?
+            .create(None)
+            .spawn_global();
 
         let metadata = metadata::MetadataActor::new(api.clone(), db.clone())
             .create(None)
             .spawn_global();
-        let block = block::BlockActor::new(backend, api, metadata.clone(), db.clone())
-            .create(None)
-            .spawn_global();
+        let block =
+            block::BlockActor::new(backend, api, metadata.clone(), db.clone(), config.genesis)
+                .create(None)
+                .spawn_global();
 
         Ok(Self {
             db,

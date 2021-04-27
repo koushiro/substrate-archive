@@ -4,7 +4,7 @@ use sc_client_api::backend::{Backend, StateBackendFor};
 use sc_executor::NativeExecutionDispatch;
 use sp_api::{ApiExt, BlockId, ConstructRuntimeApi, Core as CoreApi, Metadata as MetadataApi};
 use sp_blockchain::Backend as BlockchainBackend;
-use sp_runtime::traits::Block as BlockT;
+use sp_runtime::{traits::Block as BlockT, BuildStorage};
 
 use archive_actor::{ActorConfig, Actors, DispatcherConfig};
 use archive_client::{
@@ -155,6 +155,7 @@ where
     #[allow(clippy::type_complexity)]
     pub fn build(
         self,
+        genesis: &dyn BuildStorage,
     ) -> Result<ArchiveSystem<Block, ArchiveClient<Block, Executor, RA>, RA>, ArchiveError> {
         let backend = new_secondary_rocksdb_backend(self.config.client.rocksdb.clone())?;
         let backend = Arc::new(backend);
@@ -168,6 +169,7 @@ where
             backend,
             client,
             ActorConfig {
+                genesis: genesis.build_storage().expect("build genesis storage"),
                 postgres: self.config.postgres,
                 dispatcher: DispatcherConfig {
                     kafka: self.config.kafka,

@@ -58,6 +58,7 @@ toml = "0.5"
 
 # Parity / Substrate
 codec = { package = "parity-scale-codec", version = "2.0",  features = ["derive", "full"] }
+sc-chain-spec = "3.0"
 sc-client-api = "3.0"
 sc-executor = { version = "0.9", features = ["wasmtime"] }
 sp-api = "3.0"
@@ -74,12 +75,16 @@ archive-postgres = { path = "./postgres" }
 polkadot-runtime =  { git = "https://github.com/paritytech/polkadot", tag = "v0.8.30", optional = true }
 kusama-runtime = { git = "https://github.com/paritytech/polkadot", tag = "v0.8.30", optional = true }
 
+[features]
+polkadot = ["polkadot-runtime"]
+kusama = ["kusama-runtime"]
+
 [[bin]]
 name = "polkadot-archive"
-path = "src/bin/polkadot.rs"
-required-features = ["polkadot-runtime"]
+path = "bin/polkadot/polkadot.rs"
+required-features = ["polkadot"]
 
 [[bin]]
 name = "kusama-archive"
-path = "src/bin/kusama.rs"
-required-features = ["kusama-runtime"]
+path = "bin/kusama/kusama.rs"
+required-features = ["kusama"]

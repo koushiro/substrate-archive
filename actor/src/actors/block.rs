@@ -11,6 +11,7 @@ use sc_client_api::{
 };
 use sp_api::{ApiExt, BlockId, Core as CoreApi, ProvideRuntimeApi};
 use sp_runtime::traits::{Block as BlockT, Header as HeaderT, NumberFor};
+use sp_storage::{Storage, StorageData, StorageKey};
 use sp_version::RuntimeVersion;
 
 use crate::{
@@ -28,6 +29,7 @@ where
     api: Arc<Api>,
     metadata: Address<MetadataActor<Block>>,
     db: Address<PostgresActor<Block>>,
+    genesis: Storage,
     curr_block: u32,
 }
 
@@ -44,12 +46,14 @@ where
         api: Arc<Api>,
         metadata: Address<MetadataActor<Block>>,
         db: Address<PostgresActor<Block>>,
+        genesis: Storage,
     ) -> Self {
         Self {
             backend,
             api,
             metadata,
             db,
+            genesis,
             curr_block: 0,
         }
     }
@@ -67,7 +71,13 @@ where
         Ok(BlockMessage {
             spec_version: runtime_version.spec_version,
             inner: block,
-            changes: vec![],
+            changes: self
+                .genesis
+                .top
+                .clone()
+                .into_iter()
+                .map(|(k, v)| (StorageKey(k), Some(StorageData(v))))
+                .collect(),
         })
     }
 

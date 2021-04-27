@@ -19,14 +19,14 @@ pub struct ArchiveConfig {
 #[derive(Clone, Debug, StructOpt)]
 #[structopt(author, about)]
 pub struct ArchiveCli {
-    /// Specifies the config file.
+    /// Specifies the archive config file.
     #[structopt(short, long, name = "FILE")]
     config: PathBuf,
 }
 
 impl ArchiveCli {
     pub fn init() -> Result<ArchiveConfig, ArchiveError> {
-        let cli: Self = ArchiveCli::from_args();
+        let cli: Self = StructOpt::from_args();
         let toml_str = fs::read_to_string(cli.config.as_path())?;
         let config = toml::from_str::<ArchiveConfig>(toml_str.as_str())?;
         // initialize the logger

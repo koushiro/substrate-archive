@@ -180,6 +180,7 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "polkadot-runtime",
+ "sc-chain-spec",
  "sc-client-api",
  "sc-executor",
  "serde",
