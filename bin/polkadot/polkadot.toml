@@ -37,20 +37,21 @@ connect_timeout = 10
 ##################################
 # Archive kafka configuration #
 ##################################
-#[kafka]
-#queue_timeout = 0
-#topic = { metadata = "polkadot-metadata", block = "polkadot-block" }
+[kafka]
+queue_timeout = 0
+topic = { metadata = "polkadot-metadata", block = "polkadot-block" }
 # https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
-#[kafka.rdkafka]
-#"bootstrap.servers" = "localhost:9092"
-#"compression.codec" = "gzip" # "none" | "gzip" | "snappy" | "lz4" | "zstd"
+[kafka.rdkafka]
+"metadata.broker.list" = "localhost:9092" # or "bootstrap.servers" = "localhost:9092"
+"compression.codec" = "gzip" # "none" | "gzip" | "snappy" | "lz4" | "zstd"
+"message.max.bytes"="10485760" # 10 MB
 ## https://stackoverflow.com/questions/59322133/kafka-broker-message-size-too-large
+## https://kafka.apache.org/documentation/
 ## Broker:
-##   `message.max.bytes`: default 1000000 (1 MB)
+##   `message.max.bytes`: default 1048588 (1 MB)
 ##   `replica.fetch.max.bytes`: default 1048576 (1 MiB)
 ## Producer:
-##   `max.request.size`
+##   `message.max.bytes`: default 1048576 (1 MiB)
 ## Consumer:
-##   `max.partition.fetch.bytes`: default 1048576 (10 MiB)
-##   `fetch.max.bytes`: default 52428800 (50 MiB)
-#"message.max.bytes"="10000000" # 10 MB
+##   `max.partition.fetch.bytes`: default 1048576 (1 MiB)
+##   `fetch.max.bytes`: default 57671680 (55 MiB)

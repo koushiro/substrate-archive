@@ -56,12 +56,16 @@ where
 {
     fn spawn_dispatcher(
         config: DispatcherConfig,
-    ) -> Result<Address<dispatch::DispatcherActor<Block>>, ActorError> {
-        let mut dispatcher = dispatch::DispatcherActor::new();
+    ) -> Result<dispatch::Dispatcher<Block>, ActorError> {
+        let mut dispatcher = dispatch::Dispatcher::<Block>::new();
         if let Some(config) = config.kafka {
-            dispatcher = dispatcher.add("kafka", dispatch::kafka::KafkaActor::new(config)?);
+            let kafka = dispatch::kafka::KafkaActor::<Block>::new(config)?
+                .create(None)
+                .spawn_global();
+            log::info!(target: "actor", "Spawn Kafka Actor");
+            dispatcher.add("kafka", kafka);
+            log::info!(target: "actor", "Add Kafka Actor into dispatcher");
         }
-        let dispatcher = dispatcher.create(None).spawn_global();
         Ok(dispatcher)
     }
 
@@ -71,18 +75,27 @@ where
         config: ActorConfig,
     ) -> Result<Self, ActorError> {
         let dispatcher = Self::spawn_dispatcher(config.dispatcher)?;
-        let db = postgres::PostgresActor::new(config.postgres, dispatcher)
+        let db = postgres::PostgresActor::<Block>::new(config.postgres, dispatcher)
             .await?
             .create(None)
             .spawn_global();
+        log::info!(target: "actor", "Spawn Postgres Actor");
 
-        let metadata = metadata::MetadataActor::new(api.clone(), db.clone())
+        let metadata = metadata::MetadataActor::<Block>::new(api.clone(), db.clone())
             .create(None)
             .spawn_global();
-        let block =
-            block::BlockActor::new(backend, api, metadata.clone(), db.clone(), config.genesis)
-                .create(None)
-                .spawn_global();
+        log::info!(target: "actor", "Spawn Metadata Actor");
+
+        let block = block::BlockActor::<Block, Backend, Api>::new(
+            backend,
+            api,
+            metadata.clone(),
+            db.clone(),
+            config.genesis,
+        )
+        .create(None)
+        .spawn_global();
+        log::info!(target: "actor", "Spawn Block Actor");
 
         Ok(Self {
             db,

@@ -2,7 +2,7 @@ pub mod kafka;
 
 use std::collections::HashMap;
 
-use xtra::{prelude::*, spawn::TokioGlobalSpawnExt, Disconnected};
+use xtra::{prelude::*, Disconnected};
 
 use sp_runtime::traits::{Block as BlockT, Header as HeaderT};
 
@@ -20,13 +20,13 @@ where
 {
 }
 
-pub struct DispatcherActor<Block: BlockT> {
+pub struct Dispatcher<Block: BlockT> {
     metadata_channels: HashMap<&'static str, Box<dyn StrongMessageChannel<MetadataMessage<Block>>>>,
     block_channels: HashMap<&'static str, Box<dyn StrongMessageChannel<BlockMessage<Block>>>>,
     die_channels: HashMap<&'static str, Box<dyn StrongMessageChannel<Die>>>,
 }
 
-impl<Block: BlockT> DispatcherActor<Block> {
+impl<Block: BlockT> Dispatcher<Block> {
     pub fn new() -> Self {
         Self {
             metadata_channels: HashMap::new(),
@@ -35,15 +35,21 @@ impl<Block: BlockT> DispatcherActor<Block> {
         }
     }
 
-    pub fn add(mut self, name: &'static str, dispatcher: impl DispatchActor<Block>) -> Self {
-        let addr = dispatcher.create(None).spawn_global();
+    pub fn add<D: DispatchActor<Block>>(
+        &mut self,
+        name: &'static str,
+        addr: Address<D>,
+    ) -> &mut Self {
         self.metadata_channels.insert(name, Box::new(addr.clone()));
         self.block_channels.insert(name, Box::new(addr.clone()));
         self.die_channels.insert(name, Box::new(addr));
         self
     }
 
-    async fn dispatch_metadata(&self, message: MetadataMessage<Block>) -> Result<(), Disconnected> {
+    pub async fn dispatch_metadata(
+        &self,
+        message: MetadataMessage<Block>,
+    ) -> Result<(), Disconnected> {
         for (name, dispatcher) in &self.metadata_channels {
             log::debug!(
                 target: "actor",
@@ -56,7 +62,7 @@ impl<Block: BlockT> DispatcherActor<Block> {
         Ok(())
     }
 
-    async fn dispatch_block(&self, message: BlockMessage<Block>) -> Result<(), Disconnected> {
+    pub async fn dispatch_block(&self, message: BlockMessage<Block>) -> Result<(), Disconnected> {
         for (name, dispatcher) in &self.block_channels {
             log::debug!(
                 target: "actor",
@@ -69,51 +75,11 @@ impl<Block: BlockT> DispatcherActor<Block> {
         Ok(())
     }
 
-    async fn dispatch_die(&self, message: Die) -> Result<(), Disconnected> {
+    pub async fn dispatch_die(&self, message: Die) -> Result<(), Disconnected> {
         for (name, dispatcher) in &self.die_channels {
             log::debug!(target: "actor", "Dispatch `Die` message into `{}`", name);
             dispatcher.send(message).await?;
         }
         Ok(())
-    }
-}
-
-#[async_trait::async_trait]
-impl<Block: BlockT> Actor for DispatcherActor<Block> {}
-
-#[async_trait::async_trait]
-impl<Block: BlockT> Handler<MetadataMessage<Block>> for DispatcherActor<Block> {
-    async fn handle(
-        &mut self,
-        message: MetadataMessage<Block>,
-        _ctx: &mut Context<Self>,
-    ) -> <MetadataMessage<Block> as Message>::Result {
-        if let Err(err) = self.dispatch_metadata(message).await {
-            log::error!(target: "actor", "{}", err);
-        }
-    }
-}
-
-#[async_trait::async_trait]
-impl<Block: BlockT> Handler<BlockMessage<Block>> for DispatcherActor<Block> {
-    async fn handle(
-        &mut self,
-        message: BlockMessage<Block>,
-        _ctx: &mut Context<Self>,
-    ) -> <BlockMessage<Block> as Message>::Result {
-        if let Err(err) = self.dispatch_block(message).await {
-            log::error!(target: "actor", "{}", err);
-        }
-    }
-}
-
-#[async_trait::async_trait]
-impl<Block: BlockT> Handler<Die> for DispatcherActor<Block> {
-    async fn handle(&mut self, message: Die, ctx: &mut Context<Self>) -> <Die as Message>::Result {
-        log::info!(target: "actor", "Stopping Dispatcher Actor");
-        if let Err(err) = self.dispatch_die(message).await {
-            log::error!(target: "actor", "{}", err);
-        }
-        ctx.stop();
     }
 }

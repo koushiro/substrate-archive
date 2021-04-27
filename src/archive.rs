@@ -60,6 +60,7 @@ where
         let backend_clone = backend.clone();
         let handle = jod_thread::spawn(move || {
             let _ = start_rx.recv();
+            log::info!(target: "archive", "Start archive main loop");
             runtime.block_on(Self::main_loop(backend_clone, client, config, kill_rx))?;
             Ok(())
         });
@@ -79,9 +80,11 @@ where
         config: ActorConfig,
         kill_rx: flume::Receiver<()>,
     ) -> Result<(), ArchiveError> {
+        log::info!(target: "archive", "Spawn all actors");
         let actors = Actors::spawn(backend, client, config).await?;
         // waiting until the kill signal is received.
         let _ = kill_rx.recv_async().await;
+        log::info!(target: "archive", "Stop all actors");
         actors.kill().await?;
         Ok(())
     }

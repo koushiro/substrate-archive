@@ -7,20 +7,20 @@ use sp_runtime::traits::Block as BlockT;
 use archive_postgres::{query, BlockModel, MetadataModel, PostgresConfig, PostgresDb};
 
 use crate::{
-    actors::dispatch::DispatcherActor,
+    actors::dispatch::Dispatcher,
     error::ActorError,
     messages::{BlockMessage, CheckIfMetadataExist, Die, MaxBlock, MetadataMessage},
 };
 
 pub struct PostgresActor<Block: BlockT> {
     db: PostgresDb,
-    dispatcher: Address<DispatcherActor<Block>>,
+    dispatcher: Dispatcher<Block>,
 }
 
 impl<Block: BlockT> PostgresActor<Block> {
     pub async fn new(
         config: PostgresConfig,
-        dispatcher: Address<DispatcherActor<Block>>,
+        dispatcher: Dispatcher<Block>,
     ) -> Result<Self, ActorError> {
         let db = PostgresDb::new(config).await?;
         Ok(Self { db, dispatcher })
@@ -30,7 +30,7 @@ impl<Block: BlockT> PostgresActor<Block> {
         self.db
             .insert(MetadataModel::from(metadata.clone()))
             .await?;
-        self.dispatcher.send(metadata).await?;
+        self.dispatcher.dispatch_metadata(metadata).await?;
         Ok(())
     }
 
@@ -41,7 +41,7 @@ impl<Block: BlockT> PostgresActor<Block> {
         }
         mem::drop(conn);
         self.db.insert(BlockModel::from(block.clone())).await?;
-        self.dispatcher.send(block).await?;
+        self.dispatcher.dispatch_block(block).await?;
         Ok(())
     }
 }
@@ -113,7 +113,7 @@ impl<Block: BlockT> Handler<MaxBlock> for PostgresActor<Block> {
 impl<Block: BlockT> Handler<Die> for PostgresActor<Block> {
     async fn handle(&mut self, message: Die, ctx: &mut Context<Self>) -> <Die as Message>::Result {
         log::info!(target: "actor", "Stopping Postgres Actor");
-        if let Err(err) = self.dispatcher.send(message).await {
+        if let Err(err) = self.dispatcher.dispatch_die(message).await {
             log::error!(target: "actor", "{}", err);
         }
         ctx.stop();

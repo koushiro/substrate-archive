@@ -30,8 +30,9 @@ impl KafkaProducer {
         for (k, v) in &config.rdkafka {
             client.set(k, v);
         }
-        let producer = client.create::<FutureProducer>()?;
         log::info!(target: "kafka", "Kafka configuration: {:?}", config);
+        let producer = client.create::<FutureProducer>()?;
+        log::info!(target: "kafka", "Kafka producer created");
         Ok(Self { config, producer })
     }
 
