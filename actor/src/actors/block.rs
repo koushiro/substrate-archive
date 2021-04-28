@@ -68,15 +68,28 @@ where
             .backend
             .block(&id)?
             .expect("genesis block must exist; qed");
+        let genesis = self.genesis.clone();
         Ok(BlockMessage {
             spec_version: runtime_version.spec_version,
             inner: block,
-            changes: self
-                .genesis
+            changes: genesis
                 .top
-                .clone()
                 .into_iter()
                 .map(|(k, v)| (StorageKey(k), Some(StorageData(v))))
+                .collect(),
+            child_changes: genesis
+                .children_default
+                .into_iter()
+                .map(|(k, child)| {
+                    (
+                        StorageKey(k),
+                        child
+                            .data
+                            .into_iter()
+                            .map(|(k, v)| (StorageKey(k), Some(StorageData(v))))
+                            .collect::<Vec<_>>(),
+                    )
+                })
                 .collect(),
         })
     }
@@ -126,6 +139,7 @@ where
                 spec_version: runtime_version.spec_version,
                 inner: block,
                 changes: changes.main_storage_changes,
+                child_changes: changes.child_storage_changes,
             };
             self.metadata.send(message).await?;
             self.curr_block += 1;

@@ -28,6 +28,9 @@ pub struct BlockModel {
     // pub changes: Vec<StorageChange>,
     // pub changes: Vec<(Vec<u8>, Option<Vec<u8>>)>,
     pub changes: JsonValue,
+    // pub child_changes: Vec<ChildStorageChange>,
+    // pub child_changes: Vec<(Vec<u8>, Vec<(Vec<u8>, Option<Vec<u8>>)>>,
+    pub child_changes: JsonValue,
 }
 
 /*
@@ -35,5 +38,11 @@ pub struct BlockModel {
 pub struct StorageChange {
     pub key: Vec<u8>,
     pub data: Option<Vec<u8>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ChildStorageChange {
+    pub key: Vec<u8>,
+    pub data: StorageChange,
 }
 */

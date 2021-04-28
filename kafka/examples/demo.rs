@@ -48,6 +48,7 @@ async fn main() -> Result<(), KafkaError> {
                 StorageKey(vec![(i % u32::from(u8::MAX)) as u8]),
                 Some(StorageData(vec![(i % u32::from(u8::MAX)) as u8])),
             )],
+            child_changes: vec![]
         };
         producer.send(block).await?
     }

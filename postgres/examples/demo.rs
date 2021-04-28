@@ -40,6 +40,7 @@ async fn main() -> Result<(), SqlxError> {
             extrinsics: vec![],
             justifications: Some(vec![0]),
             changes: serde_json::json!([["0x01", "0x1234"], ["0x02", null]]),
+            child_changes: serde_json::Value::Null,
         };
         let _ = db.insert(block).await?;
     }

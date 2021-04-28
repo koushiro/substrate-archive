@@ -40,11 +40,20 @@ impl<Block: BlockT> From<MetadataMessage<Block>> for archive_kafka::MetadataPayl
     }
 }
 
+/// A list of top trie storage data.
+pub type StorageCollection = Vec<(StorageKey, Option<StorageData>)>;
+/// A list of children trie storage data.
+/// The key does not including prefix, for the `default`
+/// trie kind, so this is exclusively for the `ChildType::ParentKeyId`
+/// tries.
+pub type ChildStorageCollection = Vec<(StorageKey, StorageCollection)>;
+
 #[derive(Clone, Debug)]
 pub struct BlockMessage<Block: BlockT> {
     pub spec_version: u32,
     pub inner: SignedBlock<Block>,
-    pub changes: Vec<(StorageKey, Option<StorageData>)>,
+    pub changes: StorageCollection,
+    pub child_changes: ChildStorageCollection,
 }
 
 impl<Block: BlockT> xtra::Message for BlockMessage<Block> {
@@ -80,6 +89,8 @@ impl<Block: BlockT> From<BlockMessage<Block>> for archive_postgres::BlockModel {
                 .map(|justifications| justifications.encode()),
             changes: serde_json::to_value(block.changes)
                 .expect("Serialize storage changes shouldn't be fail"),
+            child_changes: serde_json::to_value(block.child_changes)
+                .expect("Serialize child storage changes shouldn't be fail"),
         }
     }
 }
@@ -97,6 +108,7 @@ impl<Block: BlockT> From<BlockMessage<Block>> for archive_kafka::BlockPayload<Bl
             extrinsics: block.inner.block.extrinsics().to_vec(),
             justifications: block.inner.justifications,
             changes: block.changes,
+            child_changes: block.child_changes,
         }
     }
 }

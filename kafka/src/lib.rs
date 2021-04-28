@@ -4,7 +4,10 @@ mod producer;
 
 pub use self::{
     config::{KafkaConfig, KafkaTopicConfig},
-    payload::{BlockPayload, BlockPayloadForDemo, MetadataPayload, MetadataPayloadForDemo},
+    payload::{
+        BlockPayload, BlockPayloadForDemo, ChildStorageCollection, MetadataPayload,
+        MetadataPayloadForDemo, StorageCollection,
+    },
     producer::KafkaProducer,
 };
 pub use rdkafka::error::KafkaError;

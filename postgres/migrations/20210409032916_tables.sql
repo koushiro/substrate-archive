@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS blocks (
 
 --     changes storage_ty[],
     changes jsonb NOT NULL,
+    child_changes jsonb,
 
     PRIMARY KEY (block_num)
 ) PARTITION BY RANGE (block_num);
