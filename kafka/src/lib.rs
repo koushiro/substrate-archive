@@ -1,12 +1,12 @@
 mod config;
-mod payload;
+pub mod payload;
 mod producer;
 
 pub use self::{
     config::{KafkaConfig, KafkaTopicConfig},
     payload::{
-        BlockPayload, BlockPayloadForDemo, ChildStorageCollection, MetadataPayload,
-        MetadataPayloadForDemo, StorageCollection,
+        BlockPayload, BlockPayloadForDemo, ChildStorageCollection, FinalizedBlockPayload,
+        MetadataPayload, MetadataPayloadForDemo, StorageCollection,
     },
     producer::KafkaProducer,
 };

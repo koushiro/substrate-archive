@@ -10,7 +10,10 @@ use sp_runtime::traits::Block as BlockT;
 
 use crate::{
     config::KafkaConfig,
-    payload::{BlockPayload, BlockPayloadForDemo, MetadataPayload, MetadataPayloadForDemo},
+    payload::{
+        BlockPayload, BlockPayloadForDemo, FinalizedBlockPayload, MetadataPayload,
+        MetadataPayloadForDemo,
+    },
 };
 
 #[derive(Clone)]
@@ -47,8 +50,17 @@ impl KafkaProducer {
         payload.send(self).await
     }
 
-    async fn send_inner(&self, topic: &str, payload: &str, key: &str) -> Result<(), KafkaError> {
-        let record = FutureRecord::to(topic).payload(payload).key(key);
+    async fn send_inner(
+        &self,
+        topic: &str,
+        payload: &str,
+        key: Option<&str>,
+    ) -> Result<(), KafkaError> {
+        let record = if let Some(key) = key {
+            FutureRecord::to(topic).payload(payload).key(key)
+        } else {
+            FutureRecord::to(topic).payload(payload)
+        };
         let queue_timeout = Duration::from_secs(self.config.queue_timeout);
         let delivery_status = self.producer.send(record, queue_timeout).await;
         match delivery_status {
@@ -90,10 +102,10 @@ impl<B: BlockT> SendPayload for MetadataPayload<B> {
             self.spec_version
         );
         let topic = &producer.config.topic.metadata;
-        let payload =
-            serde_json::to_string(&self).expect("Serialize metadata payload shouldn't be fail");
+        let payload = serde_json::to_string(&self)
+            .expect("Serialize metadata payload shouldn't be fail; qed");
         let key = self.spec_version.to_string();
-        producer.send_inner(&topic, &payload, &key).await
+        producer.send_inner(&topic, &payload, Some(&key)).await
     }
 }
 
@@ -107,10 +119,26 @@ impl<B: BlockT> SendPayload for BlockPayload<B> {
             self.block_hash
         );
         let topic = &producer.config.topic.block;
-        let payload =
-            serde_json::to_string(&self).expect("Serialize block payload shouldn't be fail");
+        let payload = serde_json::to_string(&self)
+            .expect("Serialize best block payload shouldn't be fail; qed");
         let key = self.block_num.to_string();
-        producer.send_inner(&topic, &payload, &key).await
+        producer.send_inner(&topic, &payload, Some(&key)).await
+    }
+}
+
+#[async_trait::async_trait]
+impl<B: BlockT> SendPayload for FinalizedBlockPayload<B> {
+    async fn send(self, producer: &KafkaProducer) -> Result<(), KafkaError> {
+        log::info!(
+            target: "kafka",
+            "Publish finalized block to kafka, number = {}, hash = {}",
+            self.block_num,
+            self.block_hash
+        );
+        let topic = &producer.config.topic.finalized_block;
+        let payload = serde_json::to_string(&self)
+            .expect("Serialize finalized block payload shouldn't be fail; qed");
+        producer.send_inner(&topic, &payload, None).await
     }
 }
 
@@ -123,10 +151,10 @@ impl SendPayload for MetadataPayloadForDemo {
             self.spec_version
         );
         let topic = &producer.config.topic.metadata;
-        let payload =
-            serde_json::to_string(&self).expect("Serialize metadata payload shouldn't be fail");
+        let payload = serde_json::to_string(&self)
+            .expect("Serialize metadata payload shouldn't be fail; qed");
         let key = self.spec_version.to_string();
-        producer.send_inner(&topic, &payload, &key).await
+        producer.send_inner(&topic, &payload, Some(&key)).await
     }
 }
 
@@ -140,9 +168,9 @@ impl SendPayload for BlockPayloadForDemo {
             self.block_hash
         );
         let topic = &producer.config.topic.block;
-        let payload =
-            serde_json::to_string(&self).expect("Serialize block payload shouldn't be fail");
+        let payload = serde_json::to_string(&self)
+            .expect("Serialize best block payload shouldn't be fail; qed");
         let key = self.block_num.to_string();
-        producer.send_inner(&topic, &payload, &key).await
+        producer.send_inner(&topic, &payload, Some(&key)).await
     }
 }

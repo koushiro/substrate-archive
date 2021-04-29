@@ -11,7 +11,7 @@ use sp_blockchain::{
 use sp_database::Database;
 use sp_runtime::{
     generic::BlockId,
-    traits::{Block as BlockT, Header as HeaderT, NumberFor},
+    traits::{Block as BlockT, Header as HeaderT, NumberFor, Zero},
     Justification, Justifications,
 };
 
@@ -164,17 +164,27 @@ where
     }
 
     fn info(&self) -> Info<Block> {
-        // TODO: Remove expect
-        let meta = utils::read_meta::<Block>(&*self.db, columns::HEADER)
-            .expect("Metadata could not be read");
-        log::warn!("Leaves are not counted on the read-only backend!");
-        Info {
-            best_hash: meta.best_hash,
-            best_number: meta.best_number,
-            genesis_hash: meta.genesis_hash,
-            finalized_hash: meta.finalized_hash,
-            finalized_number: meta.finalized_number,
-            number_leaves: 0,
+        match utils::read_meta::<Block>(&*self.db, columns::HEADER) {
+            Ok(meta) => Info {
+                best_hash: meta.best_hash,
+                best_number: meta.best_number,
+                genesis_hash: meta.genesis_hash,
+                finalized_hash: meta.finalized_hash,
+                finalized_number: meta.finalized_number,
+                // log::warn!("Leaves are not counted on the read-only backend!");
+                number_leaves: 0,
+            },
+            Err(err) => {
+                log::error!(target: "client", "read meta error: {}", err);
+                Info {
+                    best_hash: Default::default(),
+                    best_number: Zero::zero(),
+                    genesis_hash: Default::default(),
+                    finalized_hash: Default::default(),
+                    finalized_number: Zero::zero(),
+                    number_leaves: 0,
+                }
+            }
         }
     }
 

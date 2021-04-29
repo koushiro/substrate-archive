@@ -70,6 +70,7 @@ frame-benchmarking = "3.0"
 archive-client = { path = "./client" }
 archive-actor = { path = "./actor" }
 archive-postgres = { path = "./postgres" }
+archive-kafka = { path = "./kafka" }
 
 # Polkadot / Kusama
 polkadot-runtime =  { git = "https://github.com/paritytech/polkadot", tag = "v0.8.30", optional = true }

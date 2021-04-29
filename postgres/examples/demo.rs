@@ -1,4 +1,8 @@
-use archive_postgres::{migrate, BlockModel, MetadataModel, PostgresConfig, PostgresDb, SqlxError};
+use archive_postgres::{
+    migrate,
+    model::{BlockModel, FinalizedBlockModel, MetadataModel},
+    PostgresConfig, PostgresDb, SqlxError,
+};
 
 #[tokio::main]
 async fn main() -> Result<(), SqlxError> {
@@ -28,6 +32,9 @@ async fn main() -> Result<(), SqlxError> {
     let does_exist = db.check_if_metadata_exists(0).await?;
     log::info!("Metadata {} exists: {}", 0, does_exist);
 
+    let finalized_block = db.finalized_block().await?;
+    assert_eq!(finalized_block, None);
+
     for i in 0..950 {
         let block = BlockModel {
             spec_version: 0,
@@ -43,10 +50,25 @@ async fn main() -> Result<(), SqlxError> {
             child_changes: serde_json::Value::Null,
         };
         let _ = db.insert(block).await?;
+
+        let finalized_block = FinalizedBlockModel {
+            block_num: i,
+            block_hash: vec![0],
+            parent_hash: vec![0],
+        };
+        let _ = db.insert(finalized_block).await?;
     }
 
     let max_block_num = db.max_block_num().await?;
     log::info!("Max block num: {:?}", max_block_num);
+
+    let finalized_block = db.finalized_block().await?.unwrap();
+    log::info!(
+        "Finalized block num: {}, hash = 0x{}, parent_hash = 0x{}",
+        finalized_block.block_num,
+        hex::encode(&finalized_block.block_hash),
+        hex::encode(&finalized_block.parent_hash)
+    );
 
     Ok(())
 }

@@ -1,11 +1,11 @@
 mod config;
 mod database;
-mod models;
+pub mod model;
 
 pub use self::{
     config::PostgresConfig,
     database::{query, PostgresDb},
-    models::{BlockModel, MetadataModel},
+    model::{BlockModel, FinalizedBlockModel, MetadataModel},
 };
 pub use sqlx::error::Error as SqlxError;
 

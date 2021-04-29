@@ -41,6 +41,12 @@ pub struct BlockPayload<Block: BlockT> {
     pub child_changes: ChildStorageCollection,
 }
 
+#[derive(Clone, Debug, Serialize)]
+pub struct FinalizedBlockPayload<Block: BlockT> {
+    pub block_num: <Block::Header as HeaderT>::Number,
+    pub block_hash: <Block::Header as HeaderT>::Hash,
+}
+
 // only for example `demo`
 #[derive(Clone, Debug, Serialize)]
 pub struct MetadataPayloadForDemo {

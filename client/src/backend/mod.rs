@@ -6,17 +6,17 @@ use std::{collections::HashSet, sync::Arc};
 
 use sc_client_api::{
     backend::{AuxStore, Backend, PrunableStateChangesTrieStorage},
+    blockchain::Info,
     client::BlockBackend,
     UsageInfo,
 };
 use sc_client_db::{DbHash, DbState, TransactionStorageMode};
 use sc_state_db::{PruningMode, StateDb};
-use sp_blockchain::{Backend as BlockchainBackend, HeaderBackend, HeaderMetadata};
-use sp_consensus::BlockStatus;
+use sp_blockchain::{Backend as BlockchainBackend, BlockStatus, HeaderBackend, HeaderMetadata};
 use sp_database::Database;
 use sp_runtime::{
     generic::{BlockId, SignedBlock},
-    traits::{Block as BlockT, NumberFor, SaturatedConversion},
+    traits::{Block as BlockT, Header as HeaderT, NumberFor, SaturatedConversion},
     Justification, Justifications,
 };
 use sp_state_machine::Storage;
@@ -265,7 +265,7 @@ where
         )
     }
 
-    fn block_status(&self, id: &BlockId<Block>) -> BlockchainResult<BlockStatus> {
+    fn block_status(&self, id: &BlockId<Block>) -> BlockchainResult<sp_consensus::BlockStatus> {
         let hash_and_number = match *id {
             BlockId::Hash(hash) => self.blockchain().number(hash)?.map(|number| (hash, number)),
             BlockId::Number(number) => self.blockchain().hash(number)?.map(|hash| (hash, number)),
@@ -273,12 +273,12 @@ where
         match hash_and_number {
             Some((hash, number)) => {
                 if self.have_state_at(&hash, number) {
-                    Ok(BlockStatus::InChainWithState)
+                    Ok(sp_consensus::BlockStatus::InChainWithState)
                 } else {
-                    Ok(BlockStatus::InChainPruned)
+                    Ok(sp_consensus::BlockStatus::InChainPruned)
                 }
             }
-            None => Ok(BlockStatus::Unknown),
+            None => Ok(sp_consensus::BlockStatus::Unknown),
         }
     }
 
@@ -296,5 +296,33 @@ where
 
     fn has_indexed_transaction(&self, hash: &Block::Hash) -> BlockchainResult<bool> {
         self.blockchain().has_indexed_transaction(hash)
+    }
+}
+
+impl<Block> HeaderBackend<Block> for ReadOnlyBackend<Block>
+where
+    Block: BlockT,
+{
+    fn header(&self, id: BlockId<Block>) -> BlockchainResult<Option<Block::Header>> {
+        self.blockchain.header(id)
+    }
+
+    fn info(&self) -> Info<Block> {
+        self.blockchain.info()
+    }
+
+    fn status(&self, id: BlockId<Block>) -> BlockchainResult<BlockStatus> {
+        self.blockchain.status(id)
+    }
+
+    fn number(
+        &self,
+        hash: Block::Hash,
+    ) -> BlockchainResult<Option<<<Block as BlockT>::Header as HeaderT>::Number>> {
+        self.blockchain.number(hash)
+    }
+
+    fn hash(&self, number: NumberFor<Block>) -> BlockchainResult<Option<Block::Hash>> {
+        self.blockchain.hash(number)
     }
 }

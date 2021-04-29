@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS blocks (
     justifications jsonb,
 
     changes jsonb NOT NULL,
+    child_changes jsonb,
 
     PRIMARY KEY (block_num)
 ) PARTITION BY RANGE (block_num);
@@ -48,6 +49,7 @@ INSERT INTO blocks VALUES (
     decode('00', 'hex'),
     decode('00', 'hex'),
     ARRAY[]::bytea[],
-    '[[\"0x01\", \"0x1234\"], [\"0x02\", null]]'
+    '[[\"0x01\", \"0x1234\"], [\"0x02\", null]]',
+    NULL
 );
 "

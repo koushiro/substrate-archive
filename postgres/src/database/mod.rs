@@ -10,7 +10,7 @@ use sqlx::{
 };
 
 use self::insert::InsertModel;
-use crate::config::PostgresConfig;
+use crate::{config::PostgresConfig, model::FinalizedBlockModel};
 
 #[derive(Clone)]
 pub struct PostgresDb {
@@ -60,5 +60,11 @@ impl PostgresDb {
         let mut conn = self.conn().await?;
         let max = query::max_block_num(&mut conn).await?;
         Ok(max)
+    }
+
+    pub async fn finalized_block(&self) -> Result<Option<FinalizedBlockModel>, SqlxError> {
+        let mut conn = self.conn().await?;
+        let finalized_block = query::finalized_block(&mut conn).await?;
+        Ok(finalized_block)
     }
 }

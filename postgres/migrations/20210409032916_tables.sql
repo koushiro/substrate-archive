@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS metadatas (
-    spec_version integer NOT NULL,
+    spec_version integer CHECK (spec_version >= 0) NOT NULL,
 
     block_num integer NOT NULL,
     block_hash bytea NOT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS metadatas (
 CREATE TABLE IF NOT EXISTS blocks (
     spec_version integer NOT NULL REFERENCES metadatas(spec_version),
 
-    block_num integer check (block_num >= 0 and block_num < 2147483647) NOT NULL,
+    block_num integer CHECK (block_num >= 0 and block_num < 2147483647) NOT NULL,
     block_hash bytea NOT NULL,
     parent_hash bytea NOT NULL,
     state_root bytea NOT NULL,
@@ -63,3 +63,12 @@ CREATE TABLE IF NOT EXISTS blocks_9 PARTITION OF blocks FOR VALUES FROM (9000000
 -- CREATE TABLE IF NOT EXISTS blocks_7 PARTITION OF blocks FOR VALUES FROM (700) TO (800);
 -- CREATE TABLE IF NOT EXISTS blocks_8 PARTITION OF blocks FOR VALUES FROM (800) TO (900);
 -- CREATE TABLE IF NOT EXISTS blocks_9 PARTITION OF blocks FOR VALUES FROM (900) TO (1000);
+
+CREATE TABLE IF NOT EXISTS finalized_block (
+    only_one boolean PRIMARY KEY DEFAULT TRUE,
+
+    block_num integer CHECK (block_num >= 0 and block_num < 2147483647) NOT NULL,
+    block_hash bytea NOT NULL,
+
+    CONSTRAINT only_one_row CHECK (only_one)
+);

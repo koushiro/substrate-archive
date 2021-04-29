@@ -113,6 +113,36 @@ impl<Block: BlockT> From<BlockMessage<Block>> for archive_kafka::BlockPayload<Bl
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct FinalizedBlockMessage<Block: BlockT> {
+    pub block_num: <Block::Header as HeaderT>::Number,
+    pub block_hash: Block::Hash,
+}
+
+impl<Block: BlockT> xtra::Message for FinalizedBlockMessage<Block> {
+    type Result = ();
+}
+
+impl<Block: BlockT> From<FinalizedBlockMessage<Block>> for archive_postgres::FinalizedBlockModel {
+    fn from(finalized_block: FinalizedBlockMessage<Block>) -> Self {
+        Self {
+            block_num: finalized_block.block_num.saturated_into(),
+            block_hash: finalized_block.block_hash.as_ref().to_vec(),
+        }
+    }
+}
+
+impl<Block: BlockT> From<FinalizedBlockMessage<Block>>
+    for archive_kafka::FinalizedBlockPayload<Block>
+{
+    fn from(finalized_block: FinalizedBlockMessage<Block>) -> Self {
+        Self {
+            block_num: finalized_block.block_num,
+            block_hash: finalized_block.block_hash,
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct CheckIfMetadataExist {
     pub spec_version: u32,
