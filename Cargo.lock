@@ -210,6 +210,7 @@ dependencies = [
  "sp-blockchain",
  "sp-core",
  "sp-runtime",
+ "sp-state-machine",
  "sp-storage",
  "sp-version",
  "thiserror",

@@ -6,7 +6,7 @@
 console = { level = "DEBUG" }
 # Optional log level of file, default: "DEBUG"
 # Optional log file path, default: "./archive.log"
-file = { level = "DEBUG", path = "./archive.log" }
+file = { level = "DEBUG", path = "./polkadot-archive.log" }
 
 ################################
 # Archive client configuration #
@@ -39,7 +39,7 @@ connect_timeout = 10
 ##################################
 [kafka]
 queue_timeout = 0
-topic = { metadata = "polkadot-metadata", block = "polkadot-block" }
+topic = { metadata = "polkadot-metadata", block = "polkadot-block", finalized_block = "polkadot-finalized-block" }
 # https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
 [kafka.rdkafka]
 "metadata.broker.list" = "localhost:9092" # or "bootstrap.servers" = "localhost:9092"

@@ -65,7 +65,7 @@ impl InsertModel for BlockModel {
     fn gen_query<'q>(self) -> Query<'q, Postgres, PgArguments> {
         sqlx::query(
             r#"
-            INSERT INTO blocks VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            INSERT INTO blocks VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             ON CONFLICT (block_num)
             DO UPDATE SET (
                 spec_version,
@@ -77,7 +77,8 @@ impl InsertModel for BlockModel {
                 digest,
                 extrinsics,
                 justifications,
-                changes
+                main_changes,
+                child_changes
             ) = (
                 excluded.spec_version,
                 excluded.block_num,
@@ -88,7 +89,8 @@ impl InsertModel for BlockModel {
                 excluded.digest,
                 excluded.extrinsics,
                 excluded.justifications,
-                excluded.changes
+                excluded.main_changes,
+                excluded.child_changes
             );
             "#,
         )
@@ -101,7 +103,8 @@ impl InsertModel for BlockModel {
         .bind(self.digest)
         .bind(self.extrinsics)
         .bind(self.justifications)
-        .bind(self.changes)
+        .bind(self.main_changes)
+        .bind(self.child_changes)
     }
 
     async fn insert(self, conn: &mut PoolConnection<Postgres>) -> Result<u64, SqlxError> {
@@ -133,10 +136,10 @@ impl InsertModel for FinalizedBlockModel {
             ON CONFLICT (only_one)
             DO UPDATE SET (
                 block_num,
-                block_hash,
+                block_hash
             ) = (
                 excluded.block_num,
-                excluded.block_hash,
+                excluded.block_hash
             );
             "#,
         )

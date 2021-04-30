@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -72,7 +73,7 @@ where
         Ok(BlockMessage {
             spec_version: runtime_version.spec_version,
             inner: block,
-            changes: genesis
+            main_changes: genesis
                 .top
                 .into_iter()
                 .map(|(k, v)| (StorageKey(k), Some(StorageData(v))))
@@ -87,7 +88,7 @@ where
                             .data
                             .into_iter()
                             .map(|(k, v)| (StorageKey(k), Some(StorageData(v))))
-                            .collect::<Vec<_>>(),
+                            .collect::<HashMap<_, _>>(),
                     )
                 })
                 .collect(),
@@ -138,8 +139,23 @@ where
             let message = BlockMessage {
                 spec_version: runtime_version.spec_version,
                 inner: block,
-                changes: changes.main_storage_changes,
-                child_changes: changes.child_storage_changes,
+                main_changes: changes
+                    .main_storage_changes
+                    .into_iter()
+                    .map(|(k, v)| (StorageKey(k), v.map(StorageData)))
+                    .collect::<HashMap<_, _>>(),
+                child_changes: changes
+                    .child_storage_changes
+                    .into_iter()
+                    .map(|(k, v)| {
+                        (
+                            StorageKey(k),
+                            v.into_iter()
+                                .map(|(k, v)| (StorageKey(k), v.map(StorageData)))
+                                .collect::<HashMap<_, _>>(),
+                        )
+                    })
+                    .collect::<HashMap<_, _>>(),
             };
             self.metadata.send(message).await?;
             self.curr_block += 1;

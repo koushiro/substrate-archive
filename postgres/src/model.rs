@@ -25,9 +25,9 @@ pub struct BlockModel {
 
     // FIXME: The reason why we can't use composite type array
     // https://github.com/launchbadge/sqlx/issues/298 and https://github.com/launchbadge/sqlx/issues/1031
-    // pub changes: Vec<StorageChange>,
-    // pub changes: Vec<(Vec<u8>, Option<Vec<u8>>)>,
-    pub changes: JsonValue,
+    // pub main_changes: Vec<StorageChange>,
+    // pub main_changes: Vec<(Vec<u8>, Option<Vec<u8>>)>,
+    pub main_changes: JsonValue,
     // pub child_changes: Vec<ChildStorageChange>,
     // pub child_changes: Vec<(Vec<u8>, Vec<(Vec<u8>, Option<Vec<u8>>)>>,
     pub child_changes: JsonValue,

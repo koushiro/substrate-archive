@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use codec::Encode;
 use sp_runtime::{
     generic::SignedBlock,
@@ -41,18 +43,18 @@ impl<Block: BlockT> From<MetadataMessage<Block>> for archive_kafka::MetadataPayl
 }
 
 /// A list of top trie storage data.
-pub type StorageCollection = Vec<(StorageKey, Option<StorageData>)>;
+pub type StorageCollection = HashMap<StorageKey, Option<StorageData>>;
 /// A list of children trie storage data.
 /// The key does not including prefix, for the `default`
 /// trie kind, so this is exclusively for the `ChildType::ParentKeyId`
 /// tries.
-pub type ChildStorageCollection = Vec<(StorageKey, StorageCollection)>;
+pub type ChildStorageCollection = HashMap<StorageKey, StorageCollection>;
 
 #[derive(Clone, Debug)]
 pub struct BlockMessage<Block: BlockT> {
     pub spec_version: u32,
     pub inner: SignedBlock<Block>,
-    pub changes: StorageCollection,
+    pub main_changes: StorageCollection,
     pub child_changes: ChildStorageCollection,
 }
 
@@ -89,7 +91,7 @@ impl<Block: BlockT> From<BlockMessage<Block>> for archive_postgres::BlockModel {
                     .map(|justification| justification.encode())
                     .collect()
             }),
-            changes: serde_json::to_value(block.changes)
+            main_changes: serde_json::to_value(block.main_changes)
                 .expect("Serialize storage changes shouldn't be fail"),
             child_changes: serde_json::to_value(block.child_changes)
                 .expect("Serialize child storage changes shouldn't be fail"),
@@ -109,7 +111,7 @@ impl<Block: BlockT> From<BlockMessage<Block>> for archive_kafka::BlockPayload<Bl
             digest: block.inner.block.header().digest().clone(),
             extrinsics: block.inner.block.extrinsics().to_vec(),
             justifications: block.inner.justifications,
-            changes: block.changes,
+            main_changes: block.main_changes,
             child_changes: block.child_changes,
         }
     }

@@ -19,6 +19,7 @@ sp-api = "3.0"
 sp-blockchain = "3.0"
 sp-core = "3.0"
 sp-runtime = "3.0"
+sp-state-machine = "0.9"
 sp-storage = "3.0"
 sp-version = "3.0"
 

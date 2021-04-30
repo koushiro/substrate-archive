@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use archive_kafka::{
-    BlockPayloadForDemo, KafkaConfig, KafkaError, KafkaProducer, KafkaTopicConfig,
-    MetadataPayloadForDemo, StorageData, StorageKey,
+    payload::{BlockPayloadForDemo, FinalizedBlockPayloadDemo, MetadataPayloadForDemo},
+    KafkaConfig, KafkaError, KafkaProducer, KafkaTopicConfig, StorageData, StorageKey,
 };
 
 #[tokio::main]
@@ -45,14 +45,24 @@ async fn main() -> Result<(), KafkaError> {
             digest: "0x00".into(),
             extrinsics: vec![],
             justifications: Some(([1, 2, 3, 4], vec![]).into()),
-            changes: vec![(
-                StorageKey(vec![(i % u32::from(u8::MAX)) as u8]),
-                Some(StorageData(vec![(i % u32::from(u8::MAX)) as u8])),
-            )],
-            child_changes: vec![],
+            main_changes: {
+                let mut main_changes = HashMap::new();
+                main_changes.insert(
+                    StorageKey(vec![(i % u32::from(u8::MAX)) as u8]),
+                    Some(StorageData(vec![(i % u32::from(u8::MAX)) as u8])),
+                );
+                main_changes
+            },
+            child_changes: HashMap::new(),
         };
         producer.send(block).await?
     }
+
+    let finalized_block = FinalizedBlockPayloadDemo {
+        block_num: 1,
+        block_hash: "0x00".into(),
+    };
+    producer.send(finalized_block).await?;
 
     Ok(())
 }

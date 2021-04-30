@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS blocks (
 
     justifications bytea[],
 
-    changes jsonb NOT NULL,
+    main_changes jsonb NOT NULL,
     child_changes jsonb,
 
     PRIMARY KEY (block_num)

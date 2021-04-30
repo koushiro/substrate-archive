@@ -11,8 +11,8 @@ use sp_runtime::traits::Block as BlockT;
 use crate::{
     config::KafkaConfig,
     payload::{
-        BlockPayload, BlockPayloadForDemo, FinalizedBlockPayload, MetadataPayload,
-        MetadataPayloadForDemo,
+        BlockPayload, BlockPayloadForDemo, FinalizedBlockPayload, FinalizedBlockPayloadDemo,
+        MetadataPayload, MetadataPayloadForDemo,
     },
 };
 
@@ -172,5 +172,21 @@ impl SendPayload for BlockPayloadForDemo {
             .expect("Serialize best block payload shouldn't be fail; qed");
         let key = self.block_num.to_string();
         producer.send_inner(&topic, &payload, Some(&key)).await
+    }
+}
+
+#[async_trait::async_trait]
+impl SendPayload for FinalizedBlockPayloadDemo {
+    async fn send(self, producer: &KafkaProducer) -> Result<(), KafkaError> {
+        log::info!(
+            target: "kafka",
+            "Publish finalized block to kafka, number = {}, hash = {}",
+            self.block_num,
+            self.block_hash
+        );
+        let topic = &producer.config.topic.finalized_block;
+        let payload = serde_json::to_string(&self)
+            .expect("Serialize finalized block payload shouldn't be fail; qed");
+        producer.send_inner(&topic, &payload, None).await
     }
 }

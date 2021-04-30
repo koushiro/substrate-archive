@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::Serialize;
 
 use sp_core::Bytes;
@@ -16,14 +18,6 @@ pub struct MetadataPayload<Block: BlockT> {
     pub meta: Bytes,
 }
 
-/// A list of top trie storage data.
-pub type StorageCollection = Vec<(StorageKey, Option<StorageData>)>;
-/// A list of children trie storage data.
-/// The key does not including prefix, for the `default`
-/// trie kind, so this is exclusively for the `ChildType::ParentKeyId`
-/// tries.
-pub type ChildStorageCollection = Vec<(StorageKey, StorageCollection)>;
-
 #[derive(Clone, Debug, Serialize)]
 pub struct BlockPayload<Block: BlockT> {
     pub spec_version: u32,
@@ -37,8 +31,8 @@ pub struct BlockPayload<Block: BlockT> {
 
     pub justifications: Option<Justifications>,
 
-    pub changes: StorageCollection,
-    pub child_changes: ChildStorageCollection,
+    pub main_changes: HashMap<StorageKey, Option<StorageData>>,
+    pub child_changes: HashMap<StorageKey, HashMap<StorageKey, Option<StorageData>>>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -70,6 +64,12 @@ pub struct BlockPayloadForDemo {
 
     pub justifications: Option<Justifications>,
 
-    pub changes: StorageCollection,
-    pub child_changes: ChildStorageCollection,
+    pub main_changes: HashMap<StorageKey, Option<StorageData>>,
+    pub child_changes: HashMap<StorageKey, HashMap<StorageKey, Option<StorageData>>>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct FinalizedBlockPayloadDemo {
+    pub block_num: u32,
+    pub block_hash: String,
 }

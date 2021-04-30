@@ -3,14 +3,9 @@ use std::sync::Arc;
 use sc_client_api::backend::{Backend, StateBackendFor};
 use sp_api::{ApiExt, ApiRef, BlockId, Core as CoreApi};
 use sp_runtime::traits::{Block as BlockT, Header as HeaderT};
-use sp_storage::{StorageData, StorageKey};
+use sp_state_machine::{ChildStorageCollection, StorageCollection};
 
 use crate::error::BlockchainError;
-
-/// In memory array of storage values.
-pub type StorageCollection = Vec<(StorageKey, Option<StorageData>)>;
-/// In memory arrays of storage values for multiple child tries.
-pub type ChildStorageCollection = Vec<(StorageKey, StorageCollection)>;
 
 #[derive(Default)]
 pub struct StorageChanges {
@@ -66,24 +61,8 @@ where
             .into_storage_changes(&state, None, parent_hash)
             .map_err(BlockchainError::StorageChanges)?;
         Ok(StorageChanges {
-            main_storage_changes: storage_changes
-                .main_storage_changes
-                .into_iter()
-                .map(|(key, value)| (StorageKey(key), value.map(StorageData)))
-                .collect(),
-            child_storage_changes: storage_changes
-                .child_storage_changes
-                .into_iter()
-                .map(|(key, collection)| {
-                    (
-                        StorageKey(key),
-                        collection
-                            .into_iter()
-                            .map(|(key, value)| (StorageKey(key), value.map(StorageData)))
-                            .collect::<Vec<_>>(),
-                    )
-                })
-                .collect(),
+            main_storage_changes: storage_changes.main_storage_changes,
+            child_storage_changes: storage_changes.child_storage_changes,
         })
     }
 }

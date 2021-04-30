@@ -5,8 +5,8 @@ mod producer;
 pub use self::{
     config::{KafkaConfig, KafkaTopicConfig},
     payload::{
-        BlockPayload, BlockPayloadForDemo, ChildStorageCollection, FinalizedBlockPayload,
-        MetadataPayload, MetadataPayloadForDemo, StorageCollection,
+        BlockPayload, BlockPayloadForDemo, FinalizedBlockPayload, FinalizedBlockPayloadDemo,
+        MetadataPayload, MetadataPayloadForDemo,
     },
     producer::KafkaProducer,
 };
