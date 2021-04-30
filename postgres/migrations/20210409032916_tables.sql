@@ -9,16 +9,6 @@ CREATE TABLE IF NOT EXISTS metadatas (
     PRIMARY KEY (spec_version)
 );
 
--- DROP DOMAIN IF EXISTS  key_ty;
--- CREATE DOMAIN key_ty bytea NOT NULL;
--- DROP DOMAIN IF EXISTS  data_ty;
--- CREATE DOMAIN data_ty bytea;
--- DROP TYPE IF EXISTS  storage_ty;
--- CREATE TYPE storage_ty AS (
---     key key_ty,
---     data data_ty
--- );
-
 CREATE TABLE IF NOT EXISTS blocks (
     spec_version integer NOT NULL REFERENCES metadatas(spec_version),
 
@@ -30,9 +20,8 @@ CREATE TABLE IF NOT EXISTS blocks (
     digest bytea NOT NULL,
     extrinsics bytea[] NOT NULL,
 
-    justifications bytea,
+    justifications bytea[],
 
---     changes storage_ty[],
     changes jsonb NOT NULL,
     child_changes jsonb,
 

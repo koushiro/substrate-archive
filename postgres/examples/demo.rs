@@ -45,7 +45,7 @@ async fn main() -> Result<(), SqlxError> {
             extrinsics_root: vec![0],
             digest: vec![0],
             extrinsics: vec![],
-            justifications: Some(vec![0]),
+            justifications: Some(vec![vec![0]]),
             changes: serde_json::json!([["0x01", "0x1234"], ["0x02", null]]),
             child_changes: serde_json::Value::Null,
         };
@@ -54,7 +54,6 @@ async fn main() -> Result<(), SqlxError> {
         let finalized_block = FinalizedBlockModel {
             block_num: i,
             block_hash: vec![0],
-            parent_hash: vec![0],
         };
         let _ = db.insert(finalized_block).await?;
     }
@@ -64,10 +63,9 @@ async fn main() -> Result<(), SqlxError> {
 
     let finalized_block = db.finalized_block().await?.unwrap();
     log::info!(
-        "Finalized block num: {}, hash = 0x{}, parent_hash = 0x{}",
+        "Finalized block num: {}, hash = 0x{}",
         finalized_block.block_num,
-        hex::encode(&finalized_block.block_hash),
-        hex::encode(&finalized_block.parent_hash)
+        hex::encode(&finalized_block.block_hash)
     );
 
     Ok(())

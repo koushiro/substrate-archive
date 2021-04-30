@@ -14,6 +14,7 @@ async fn main() -> Result<(), KafkaError> {
         topic: KafkaTopicConfig {
             metadata: "polkadot-metadata".into(),
             block: "polkadot-block".into(),
+            finalized_block: "polkadot-finalized-block".into(),
         },
         rdkafka: {
             let mut rdkakfa = HashMap::new();
