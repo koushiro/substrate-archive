@@ -49,15 +49,18 @@ fn main() {
     })
     .unwrap();
     let backend = ArchiveBackend::<Block>::new(Arc::new(db), Default::default()).unwrap();
-    let block = backend.block(&BlockId::Number(512u32.into())).unwrap();
-    log::info!("Block #512: {:?}", block);
 
-    let justifications = backend
-        .justifications(&BlockId::Number(512u32.into()))
-        .unwrap();
-    log::info!("Block #512 Justifications: {:?}", justifications);
+    print_block(&backend, 512);
+    print_block(&backend, 45568);
 
     // print_runtime_info();
+}
+
+fn print_block(backend: &ArchiveBackend<Block>, n: u32) {
+    let block = backend.block(&BlockId::Number(n.into())).unwrap();
+    log::info!("Block #{}: {:?}", n, block);
+    let justifications = backend.justifications(&BlockId::Number(n.into())).unwrap();
+    log::info!("Block #{} Justifications: {:?}", n, justifications);
 }
 
 fn print_runtime_info() {

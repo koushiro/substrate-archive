@@ -12,7 +12,7 @@ use sp_database::Database;
 use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, Header as HeaderT, NumberFor, Zero},
-    Justification, Justifications,
+    EncodedJustification, Justifications,
 };
 
 use crate::{
@@ -54,6 +54,17 @@ where
             transaction_storage,
         })
     }
+}
+
+// https://github.com/paritytech/substrate/pull/7640
+// This is purely during a backwards compatible transitionary period and should be removed
+// once we can assume all nodes can send and receive multiple Justifications
+// The ID tag is hardcoded here to avoid depending on the GRANDPA crate.
+// TODO: https://github.com/paritytech/substrate/issues/8172
+fn legacy_justification_mapping(
+    justification: Option<EncodedJustification>,
+) -> Option<Justifications> {
+    justification.map(|just| (*b"FRNK", just).into())
 }
 
 impl<Block> BlockchainBackend<Block> for BlockchainDb<Block>
@@ -107,20 +118,22 @@ where
 
     fn justifications(&self, id: BlockId<Block>) -> BlockchainResult<Option<Justifications>> {
         match utils::read_db(&*self.db, columns::KEY_LOOKUP, columns::JUSTIFICATIONS, id)? {
-            Some(justifications) => match Justification::decode(&mut justifications.as_slice()) {
-                Ok(justification) => Ok(Some(justification.into())),
-                Err(_) => {
-                    // Storing multiple Justifications per block, https://github.com/paritytech/substrate/pull/7640
-                    log::debug!(target: "client", "There are multiple justifications in the block: {}", id);
-                    match Justifications::decode(&mut justifications.as_slice()) {
-                        Ok(justifications) => Ok(Some(justifications)),
-                        Err(err) => Err(backend_err(format!(
-                            "Error decoding justifications: {}",
-                            err
-                        ))),
+            // Storing multiple Justifications per block, https://github.com/paritytech/substrate/pull/7640
+            Some(justifications) => {
+                match EncodedJustification::decode(&mut justifications.as_slice()) {
+                    Ok(justification) => Ok(legacy_justification_mapping(Some(justification))),
+                    Err(_) => {
+                        log::debug!(target: "client", "There are multiple justifications in the block: {}", id);
+                        match Justifications::decode(&mut justifications.as_slice()) {
+                            Ok(justifications) => Ok(Some(justifications)),
+                            Err(err) => Err(backend_err(format!(
+                                "Error decoding justifications: {}",
+                                err
+                            ))),
+                        }
                     }
                 }
-            },
+            }
             None => Ok(None),
         }
     }
