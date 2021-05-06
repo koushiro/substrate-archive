@@ -2,10 +2,10 @@
 # Archive logger configuration #
 ################################
 [logger]
-# Optional log level of console, default: "DEBUG"
+## Optional log level of console, default: "DEBUG"
 console = { level = "DEBUG" }
-# Optional log level of file, default: "DEBUG"
-# Optional log file path, default: "./archive.log"
+## Optional log level of file, default: "DEBUG"
+## Optional log file path, default: "./archive.log"
 file = { level = "DEBUG", path = "./polkadot-archive.log" }
 
 ################################
@@ -14,7 +14,7 @@ file = { level = "DEBUG", path = "./polkadot-archive.log" }
 [client]
 #wasm_runtime_overrides = "./wasm_runtime"
 
-# RocksDB backend configuration for archive client
+## RocksDB backend configuration for archive client
 [client.rocksdb]
 path = "../polkadot/database/chains/polkadot/db"
 cache_size = 128
@@ -40,11 +40,9 @@ connect_timeout = 10
 [kafka]
 queue_timeout = 0
 topic = { metadata = "polkadot-metadata", block = "polkadot-block", finalized_block = "polkadot-finalized-block" }
-# https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
-[kafka.rdkafka]
-"metadata.broker.list" = "localhost:9092" # or "bootstrap.servers" = "localhost:9092"
-"compression.codec" = "gzip" # "none" | "gzip" | "snappy" | "lz4" | "zstd"
-"message.max.bytes" = "10485760" # 10 MB
+
+## https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
+##
 ## https://stackoverflow.com/questions/59322133/kafka-broker-message-size-too-large
 ## https://kafka.apache.org/documentation/
 ## Broker:
@@ -55,3 +53,7 @@ topic = { metadata = "polkadot-metadata", block = "polkadot-block", finalized_bl
 ## Consumer:
 ##   `max.partition.fetch.bytes`: default 1048576 (1 MiB)
 ##   `fetch.max.bytes`: default 57671680 (55 MiB)
+[kafka.rdkafka]
+"metadata.broker.list" = "localhost:9092" # or "bootstrap.servers" = "localhost:9092"
+"compression.codec" = "gzip" # "none" | "gzip" | "snappy" | "lz4" | "zstd"
+"message.max.bytes" = "10485760" # 10 MB
