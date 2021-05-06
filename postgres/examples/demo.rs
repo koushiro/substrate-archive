@@ -15,6 +15,7 @@ async fn main() -> Result<(), SqlxError> {
         connect_timeout: 30,
         idle_timeout: Some(10 * 60),
         max_lifetime: Some(30 * 60),
+        disable_statement_logging: false,
     };
 
     migrate(config.uri()).await?;

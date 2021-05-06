@@ -1,12 +1,14 @@
 mod insert;
 pub mod query;
+pub mod update;
 
 use std::time::Duration;
 
 use sqlx::{
     error::Error as SqlxError,
     pool::PoolConnection,
-    postgres::{PgPool, PgPoolOptions, Postgres},
+    postgres::{PgConnectOptions, PgPool, PgPoolOptions, Postgres},
+    ConnectOptions,
 };
 
 use self::insert::InsertModel;
@@ -20,13 +22,20 @@ pub struct PostgresDb {
 
 impl PostgresDb {
     pub async fn new(config: PostgresConfig) -> Result<Self, SqlxError> {
+        let options = if config.disable_statement_logging {
+            let mut options = config.uri().parse::<PgConnectOptions>()?;
+            options.disable_statement_logging();
+            options
+        } else {
+            config.uri().parse::<PgConnectOptions>()?
+        };
         let pool = PgPoolOptions::new()
             .min_connections(config.min_connections)
             .max_connections(config.max_connections)
             .connect_timeout(Duration::from_secs(config.connect_timeout))
             .idle_timeout(config.idle_timeout.map(Duration::from_secs))
             .max_lifetime(config.max_lifetime.map(Duration::from_secs))
-            .connect(config.uri())
+            .connect_with(options)
             .await?;
         log::info!(target: "postgres", "Postgres configuration: {:?}", config);
         Ok(Self { config, pool })
@@ -47,6 +56,16 @@ impl PostgresDb {
     pub async fn insert(&self, model: impl InsertModel) -> Result<u64, SqlxError> {
         let mut conn = self.conn().await?;
         let rows_affected = model.insert(&mut conn).await?;
+        Ok(rows_affected)
+    }
+
+    pub async fn update_spec(
+        &self,
+        spec_version: u32,
+        block_number: u32,
+    ) -> Result<u64, SqlxError> {
+        let mut conn = self.conn().await?;
+        let rows_affected = update::update_spec(spec_version, block_number, &mut conn).await?;
         Ok(rows_affected)
     }
 

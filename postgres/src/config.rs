@@ -10,6 +10,8 @@ pub struct PostgresConfig {
     pub connect_timeout: u64,      // seconds
     pub idle_timeout: Option<u64>, // seconds
     pub max_lifetime: Option<u64>, // seconds
+    // Entirely disables statement logging (both slow and regular).
+    pub disable_statement_logging: bool,
 }
 
 impl PostgresConfig {

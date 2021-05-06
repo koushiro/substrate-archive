@@ -33,6 +33,7 @@ uri = "postgres://koushiro:123@localhost:5432/kusama-archive"
 min_connections = 2
 max_connections = 8
 connect_timeout = 10
+disable_statement_logging = false
 
 ##################################
 # Archive kafka configuration #
