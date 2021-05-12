@@ -1,6 +1,5 @@
 mod insert;
 pub mod query;
-pub mod update;
 
 use std::time::Duration;
 
@@ -56,16 +55,6 @@ impl PostgresDb {
     pub async fn insert(&self, model: impl InsertModel) -> Result<u64, SqlxError> {
         let mut conn = self.conn().await?;
         let rows_affected = model.insert(&mut conn).await?;
-        Ok(rows_affected)
-    }
-
-    pub async fn update_spec(
-        &self,
-        spec_version: u32,
-        block_number: u32,
-    ) -> Result<u64, SqlxError> {
-        let mut conn = self.conn().await?;
-        let rows_affected = update::update_spec(spec_version, block_number, &mut conn).await?;
         Ok(rows_affected)
     }
 

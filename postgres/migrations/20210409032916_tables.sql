@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS metadatas (
     spec_version integer CHECK (spec_version >= 0) NOT NULL,
 
-    block_num integer NOT NULL,
+    block_num integer CHECK (block_num >= 0 and block_num < 2147483647) NOT NULL,
     block_hash bytea NOT NULL,
 
     meta bytea NOT NULL,
