@@ -66,7 +66,11 @@ impl SecondaryRocksDb {
 
     pub fn get(&self, col: ColumnId, key: &[u8]) -> Option<DBValue> {
         match self.0.get(col, key) {
-            Ok(value) => value,
+            Ok(Some(value)) => Some(value),
+            Ok(None) => {
+                self.0.try_catch_up_with_primary().ok()?;
+                None
+            }
             Err(err) => {
                 log::debug!(target: "client", "{}, Catching up with primary and trying again...", err);
                 self.0.try_catch_up_with_primary().ok()?;

@@ -161,7 +161,8 @@ where
             self.curr_block += 1;
             Ok(())
         } else {
-            tokio::time::sleep(Duration::from_secs(1)).await;
+            log::debug!(target: "actor", "Waiting for crawling block #{}", self.curr_block);
+            tokio::time::sleep(Duration::from_secs(2)).await;
             Ok(())
         }
     }
