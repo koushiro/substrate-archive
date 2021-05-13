@@ -212,6 +212,11 @@ where
         Err(backend_err("Reverting blocks not supported"))
     }
 
+    fn remove_leaf_block(&self, _hash: &Block::Hash) -> BlockchainResult<()> {
+        log::warn!("Remove leaf block not supported for read-only backend");
+        Err(backend_err("Remove leaf block not supported"))
+    }
+
     fn get_import_lock(&self) -> &parking_lot::RwLock<()> {
         panic!("No lock exists for read only backend!")
     }
