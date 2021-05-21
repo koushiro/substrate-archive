@@ -134,7 +134,11 @@ where
             let api = self.api.runtime_api();
             let executor = BlockExecutor::new(block.block.clone(), &self.backend, api);
             let changes = executor.into_storage_changes()?;
-            log::debug!(target: "actor", "Took {:?} to execute block", now.elapsed());
+            log::debug!(
+                target: "actor",
+                "Took {:?} to execute block #{}",
+                now.elapsed(), block.block.header().number()
+            );
 
             let message = BlockMessage {
                 spec_version: runtime_version.spec_version,
