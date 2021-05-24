@@ -19,7 +19,7 @@ pub async fn check_if_metadata_exists(
     let mut args = PgArguments::default();
     args.add(spec_version);
     let doest_exist: DoesExist = sqlx::query_as_with(
-        r#"SELECT EXISTS(SELECT spec_version FROM metadatas WHERE spec_version = $1)"#,
+        r#"SELECT EXISTS(SELECT spec_version FROM metadata WHERE spec_version = $1)"#,
         args,
     )
     .fetch_one(conn)
@@ -34,7 +34,7 @@ pub async fn max_block_num(conn: &mut PoolConnection<Postgres>) -> Result<Option
         max: Option<i32>,
     }
 
-    let max: Max = sqlx::query_as(r#"SELECT MAX(block_num) FROM blocks"#)
+    let max: Max = sqlx::query_as(r#"SELECT MAX(block_num) FROM block"#)
         .fetch_one(conn)
         .await?;
     Ok(max.max.map(|v| v as u32))

@@ -19,7 +19,7 @@ impl InsertModel for MetadataModel {
     fn gen_query<'q>(self) -> Query<'q, Postgres, PgArguments> {
         sqlx::query(
             r#"
-            INSERT INTO metadatas VALUES ($1, $2, $3, $4)
+            INSERT INTO metadata VALUES ($1, $2, $3, $4)
             ON CONFLICT (spec_version)
             DO UPDATE SET (
                 spec_version,
@@ -65,7 +65,7 @@ impl InsertModel for BlockModel {
     fn gen_query<'q>(self) -> Query<'q, Postgres, PgArguments> {
         sqlx::query(
             r#"
-            INSERT INTO blocks VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            INSERT INTO block VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             ON CONFLICT (block_num)
             DO UPDATE SET (
                 spec_version,

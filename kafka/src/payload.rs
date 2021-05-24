@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use serde::Serialize;
+use serde::{Serialize, Serializer};
 
 use sp_core::Bytes;
 use sp_runtime::{
@@ -26,6 +26,8 @@ pub struct BlockPayload<Block: BlockT> {
     pub parent_hash: <Block::Header as HeaderT>::Hash,
     pub state_root: <Block::Header as HeaderT>::Hash,
     pub extrinsics_root: <Block::Header as HeaderT>::Hash,
+    #[serde(serialize_with = "self::serialize_digest")]
+    #[serde(bound(serialize = "Digest<<Block::Header as HeaderT>::Hash>: codec::Encode"))]
     pub digest: Digest<<Block::Header as HeaderT>::Hash>,
     pub extrinsics: Vec<<Block as BlockT>::Extrinsic>,
 
@@ -33,6 +35,14 @@ pub struct BlockPayload<Block: BlockT> {
 
     pub main_changes: HashMap<StorageKey, Option<StorageData>>,
     pub child_changes: HashMap<StorageKey, HashMap<StorageKey, Option<StorageData>>>,
+}
+
+fn serialize_digest<D, S>(digest: &D, serializer: S) -> Result<S::Ok, S::Error>
+where
+    D: codec::Encode,
+    S: Serializer,
+{
+    digest.using_encoded(|bytes| sp_core::bytes::serialize(bytes, serializer))
 }
 
 #[derive(Clone, Debug, Serialize)]
