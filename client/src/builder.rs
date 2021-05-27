@@ -19,7 +19,7 @@ pub type ArchiveBackend<Block> = ReadOnlyBackend<Block>;
 
 /// Archive client call executor type.
 pub type ArchiveCallExecutor<Block, Executor> =
-    sc_service::LocalCallExecutor<ReadOnlyBackend<Block>, NativeExecutor<Executor>>;
+    sc_service::LocalCallExecutor<Block, ReadOnlyBackend<Block>, NativeExecutor<Executor>>;
 
 /// Archive client type.
 pub type ArchiveClient<Block, Executor, RA> =
@@ -58,6 +58,7 @@ where
             offchain_worker_enabled: config.offchain_worker.enabled,
             offchain_indexing_api: config.offchain_worker.indexing_enabled,
             wasm_runtime_overrides: config.wasm_runtime_overrides,
+            wasm_runtime_substitutes: Default::default(),
         },
     )?;
 
