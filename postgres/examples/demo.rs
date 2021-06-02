@@ -1,21 +1,17 @@
-use archive_postgres::{
-    migrate,
-    model::{BlockModel, FinalizedBlockModel, MetadataModel},
-    PostgresConfig, PostgresDb, SqlxError,
-};
+use archive_postgres::{migrate, model::*, PostgresConfig, PostgresDb, SqlxError};
 
 #[tokio::main]
 async fn main() -> Result<(), SqlxError> {
     env_logger::init();
 
     let config = PostgresConfig {
-        uri: "postgres://koushiro:123@localhost:5432/archive".to_string(),
+        uri: "postgres://koushiro:123@localhost:5432/polkadot-archive".to_string(),
         min_connections: 1,
         max_connections: 2,
         connect_timeout: 30,
         idle_timeout: Some(10 * 60),
         max_lifetime: Some(30 * 60),
-        disable_statement_logging: false,
+        disable_statement_logging: true,
     };
 
     migrate(config.uri()).await?;
@@ -36,28 +32,35 @@ async fn main() -> Result<(), SqlxError> {
     let finalized_block = db.finalized_block().await?;
     assert_eq!(finalized_block, None);
 
-    for i in 0..950 {
+    for i in 0..=u8::MAX {
         let block = BlockModel {
             spec_version: 0,
-            block_num: i,
-            block_hash: vec![0],
-            parent_hash: vec![0],
-            state_root: vec![0],
-            extrinsics_root: vec![0],
-            digest: vec![0],
+            block_num: u32::from(i),
+            block_hash: vec![i],
+            parent_hash: vec![i],
+            state_root: vec![i],
+            extrinsics_root: vec![i],
+            digest: vec![i],
             extrinsics: vec![],
             justifications: Some(vec![vec![0]]),
-            main_changes: serde_json::json!({
-                "0x01": "0x1234",
-                "0x02": null
-            }),
-            child_changes: serde_json::Value::Null,
         };
         let _ = db.insert(block).await?;
 
+        // batch insert is much faster than insert multiple times
+        let storages = (0..u8::MAX)
+            .map(|count| MainStorageChangeModel {
+                block_num: u32::from(i),
+                block_hash: vec![i],
+                prefix: vec![count],
+                key: vec![count],
+                data: Some(vec![count]),
+            })
+            .collect::<Vec<_>>();
+        let _ = db.insert(storages).await?;
+
         let finalized_block = FinalizedBlockModel {
-            block_num: i,
-            block_hash: vec![0],
+            block_num: u32::from(i),
+            block_hash: vec![i],
         };
         let _ = db.insert(finalized_block).await?;
     }

@@ -6,7 +6,7 @@ use xtra::{prelude::*, Disconnected};
 
 use sp_runtime::traits::{Block as BlockT, Header as HeaderT};
 
-use crate::messages::{BlockMessage, Die, MetadataMessage};
+use crate::message::{BlockMessage, Die, MetadataMessage};
 
 pub trait DispatchActor<Block: BlockT>:
     Actor + Handler<MetadataMessage<Block>> + Handler<BlockMessage<Block>> + Handler<Die>

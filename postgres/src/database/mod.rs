@@ -1,3 +1,5 @@
+#[allow(unused)]
+mod batch;
 mod insert;
 pub mod query;
 

@@ -8,12 +8,12 @@
 --         partition_name TEXT;
 --     BEGIN
 --         table_id := NEW.block_num / blocks_per_table;
---         partition_name := 'blocks_' || table_id;
+--         partition_name := 'block_' || table_id;
 --         IF NOT EXISTS (SELECT relname FROM pg_class WHERE relname=partition_name) THEN
 --             RAISE NOTICE 'A partition has been created %', partition_name;
 --             EXECUTE format(
 --                 $SQL$
---                     CREATE TABLE %s PARTITION OF blocks FOR VALUES FROM (%L) TO (%L);
+--                     CREATE TABLE %s PARTITION OF block FOR VALUES FROM (%L) TO (%L);
 --                 $SQL$,
 --                 partition_name,
 --                 table_id * blocks_per_table,

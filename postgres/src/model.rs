@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use serde_json::Value as JsonValue;
 use sqlx::FromRow;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, FromRow)]
@@ -22,30 +21,25 @@ pub struct BlockModel {
     pub extrinsics: Vec<Vec<u8>>,
 
     pub justifications: Option<Vec<Vec<u8>>>,
-
-    // FIXME: The reason why we can't use composite type array
-    // https://github.com/launchbadge/sqlx/issues/298 and https://github.com/launchbadge/sqlx/issues/1031
-    // pub main_changes: Vec<StorageChange>,
-    // pub main_changes: Vec<(Vec<u8>, Option<Vec<u8>>)>,
-    pub main_changes: JsonValue,
-    // pub child_changes: Vec<ChildStorageChange>,
-    // pub child_changes: Vec<(Vec<u8>, Vec<(Vec<u8>, Option<Vec<u8>>)>>,
-    pub child_changes: JsonValue,
 }
 
-/*
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct StorageChange {
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, FromRow)]
+pub struct MainStorageChangeModel {
+    pub block_num: u32,
+    pub block_hash: Vec<u8>,
+    pub prefix: Vec<u8>,
     pub key: Vec<u8>,
     pub data: Option<Vec<u8>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct ChildStorageChange {
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, FromRow)]
+pub struct ChildStorageChangeModel {
+    pub block_num: u32,
+    pub block_hash: Vec<u8>,
+    pub prefix_key: Vec<u8>,
     pub key: Vec<u8>,
-    pub data: StorageChange,
+    pub data: Option<Vec<u8>>,
 }
-*/
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, FromRow)]
 pub struct FinalizedBlockModel {

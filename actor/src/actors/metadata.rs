@@ -9,7 +9,7 @@ use sp_runtime::traits::{Block as BlockT, Header as HeaderT};
 use crate::{
     actors::postgres::PostgresActor,
     error::ActorError,
-    messages::{BlockMessage, CheckIfMetadataExist, Die, MetadataMessage},
+    message::{BlockMessage, CheckIfMetadataExist, Die, MetadataMessage},
 };
 
 pub trait GetMetadata<Block: BlockT>: Send + Sync {

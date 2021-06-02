@@ -4,12 +4,15 @@ use xtra::prelude::*;
 
 use sp_runtime::traits::Block as BlockT;
 
-use archive_postgres::{query, BlockModel, MetadataModel, PostgresConfig, PostgresDb};
+use archive_postgres::{
+    query, BlockModel, ChildStorageChangeModel, MainStorageChangeModel, MetadataModel,
+    PostgresConfig, PostgresDb,
+};
 
 use crate::{
     actors::dispatch::Dispatcher,
     error::ActorError,
-    messages::{BlockMessage, CheckIfMetadataExist, Die, MaxBlock, MetadataMessage},
+    message::{BlockMessage, CheckIfMetadataExist, Die, MaxBlock, MetadataMessage},
 };
 
 pub struct PostgresActor<Block: BlockT> {
@@ -34,14 +37,20 @@ impl<Block: BlockT> PostgresActor<Block> {
         Ok(())
     }
 
-    async fn block_handler(&self, block: BlockMessage<Block>) -> Result<(), ActorError> {
+    async fn block_handler(&self, message: BlockMessage<Block>) -> Result<(), ActorError> {
         let mut conn = self.db.conn().await?;
-        while !query::check_if_metadata_exists(block.spec_version, &mut conn).await? {
+        while !query::check_if_metadata_exists(message.spec_version, &mut conn).await? {
             tokio::time::sleep(Duration::from_millis(20)).await;
         }
         mem::drop(conn);
-        self.db.insert(BlockModel::from(block.clone())).await?;
-        self.dispatcher.dispatch_block(block).await?;
+        let (block, main_storage, _child_storage): (
+            BlockModel,
+            Vec<MainStorageChangeModel>,
+            Vec<ChildStorageChangeModel>,
+        ) = message.clone().into();
+        self.db.insert(block).await?;
+        self.db.insert(main_storage).await?;
+        self.dispatcher.dispatch_block(message).await?;
         Ok(())
     }
 }

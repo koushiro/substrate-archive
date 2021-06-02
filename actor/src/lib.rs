@@ -2,7 +2,7 @@ mod actors;
 mod config;
 mod error;
 mod exec;
-mod messages;
+mod message;
 
 pub use self::{
     actors::Actors,

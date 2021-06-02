@@ -4,7 +4,7 @@ use sp_runtime::traits::Block as BlockT;
 
 use archive_kafka::{BlockPayload, KafkaConfig, KafkaError, KafkaProducer, MetadataPayload};
 
-use crate::messages::{BlockMessage, Die, MetadataMessage};
+use crate::message::{BlockMessage, Die, MetadataMessage};
 
 pub struct KafkaActor<Block: BlockT> {
     producer: KafkaProducer,

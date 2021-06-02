@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -12,14 +11,14 @@ use sc_client_api::{
 };
 use sp_api::{ApiExt, BlockId, Core as CoreApi, ProvideRuntimeApi};
 use sp_runtime::traits::{Block as BlockT, Header as HeaderT, NumberFor};
-use sp_storage::{Storage, StorageData, StorageKey};
+use sp_storage::Storage;
 use sp_version::RuntimeVersion;
 
 use crate::{
     actors::{metadata::MetadataActor, postgres::PostgresActor},
     error::ActorError,
     exec::BlockExecutor,
-    messages::{BlockMessage, Crawl, Die, MaxBlock, ReIndex},
+    message::{BlockMessage, Crawl, Die, MaxBlock, ReIndex},
 };
 
 pub struct BlockActor<Block, Backend, Api>
@@ -73,22 +72,18 @@ where
         Ok(BlockMessage {
             spec_version: runtime_version.spec_version,
             inner: block,
-            main_changes: genesis
-                .top
-                .into_iter()
-                .map(|(k, v)| (StorageKey(k), Some(StorageData(v))))
-                .collect(),
+            main_changes: genesis.top.into_iter().map(|(k, v)| (k, Some(v))).collect(),
             child_changes: genesis
                 .children_default
                 .into_iter()
                 .map(|(k, child)| {
                     (
-                        StorageKey(k),
+                        k,
                         child
                             .data
                             .into_iter()
-                            .map(|(k, v)| (StorageKey(k), Some(StorageData(v))))
-                            .collect::<HashMap<_, _>>(),
+                            .map(|(k, v)| (k, Some(v)))
+                            .collect::<Vec<_>>(),
                     )
                 })
                 .collect(),
@@ -143,23 +138,8 @@ where
             let message = BlockMessage {
                 spec_version: runtime_version.spec_version,
                 inner: block,
-                main_changes: changes
-                    .main_storage_changes
-                    .into_iter()
-                    .map(|(k, v)| (StorageKey(k), v.map(StorageData)))
-                    .collect::<HashMap<_, _>>(),
-                child_changes: changes
-                    .child_storage_changes
-                    .into_iter()
-                    .map(|(k, v)| {
-                        (
-                            StorageKey(k),
-                            v.into_iter()
-                                .map(|(k, v)| (StorageKey(k), v.map(StorageData)))
-                                .collect::<HashMap<_, _>>(),
-                        )
-                    })
-                    .collect::<HashMap<_, _>>(),
+                main_changes: changes.main_storage_changes,
+                child_changes: changes.child_storage_changes,
             };
             self.metadata.send(message).await?;
             self.curr_block += 1;

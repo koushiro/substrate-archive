@@ -17,7 +17,7 @@ use sp_runtime::traits::Block as BlockT;
 use crate::{
     config::{ActorConfig, DispatcherConfig},
     error::ActorError,
-    messages::*,
+    message::*,
 };
 
 /// The direction of data flow:

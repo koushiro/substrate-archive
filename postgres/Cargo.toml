@@ -14,4 +14,4 @@ sqlx = { version = "0.5", features = ["postgres", "runtime-tokio-rustls", "json"
 
 [dev-dependencies]
 env_logger = "0.8"
-tokio = { version = "1.4", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.6", features = ["macros", "rt-multi-thread"] }
