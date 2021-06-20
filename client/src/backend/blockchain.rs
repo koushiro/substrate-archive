@@ -166,6 +166,39 @@ where
     fn has_indexed_transaction(&self, hash: &Block::Hash) -> BlockchainResult<bool> {
         Ok(self.db.contains(columns::TRANSACTION, hash.as_ref()))
     }
+
+    fn block_indexed_body(&self, id: BlockId<Block>) -> BlockchainResult<Option<Vec<Vec<u8>>>> {
+        match self.transaction_storage {
+            TransactionStorageMode::BlockBody => Ok(None),
+            TransactionStorageMode::StorageChain => {
+                let body = match utils::read_db(&*self.db, columns::KEY_LOOKUP, columns::BODY, id)?
+                {
+                    Some(body) => body,
+                    None => return Ok(None),
+                };
+                match Vec::<ExtrinsicHeader>::decode(&mut &body[..]) {
+                    Ok(index) => {
+                        let mut transactions = Vec::new();
+                        for ExtrinsicHeader { indexed_hash, .. } in index.into_iter() {
+                            if indexed_hash != Default::default() {
+                                match self.db.get(columns::TRANSACTION, indexed_hash.as_ref()) {
+                                    Some(t) => transactions.push(t),
+                                    None => {
+                                        return Err(backend_err(format!(
+                                            "Missing indexed transaction {:?}",
+                                            indexed_hash
+                                        )))
+                                    }
+                                }
+                            }
+                        }
+                        Ok(Some(transactions))
+                    }
+                    Err(err) => Err(backend_err(format!("Error decoding body list: {}", err))),
+                }
+            }
+        }
+    }
 }
 
 impl<Block> HeaderBackend<Block> for BlockchainDb<Block>

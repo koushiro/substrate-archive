@@ -254,6 +254,10 @@ where
         self.blockchain().body(*id)
     }
 
+    fn block_indexed_body(&self, id: &BlockId<Block>) -> BlockchainResult<Option<Vec<Vec<u8>>>> {
+        self.blockchain().block_indexed_body(*id)
+    }
+
     fn block(&self, id: &BlockId<Block>) -> BlockchainResult<Option<SignedBlock<Block>>> {
         Ok(
             match (
