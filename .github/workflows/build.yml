@@ -12,7 +12,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: [ubuntu-latest, macos-latest]
-        toolchain: [nightly-2021-04-20]
+        toolchain: [stable]
     runs-on: ${{ matrix.platform }}
 
     steps:
@@ -26,7 +26,7 @@ jobs:
           toolchain: ${{ matrix.toolchain }}
           override: true
           components: rustfmt, clippy
-          target: wasm32-unknown-unknown
+          #target: wasm32-unknown-unknown
 
       - name: Cache Build Output
         uses: actions/cache@v2
