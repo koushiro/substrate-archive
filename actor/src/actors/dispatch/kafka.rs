@@ -2,9 +2,9 @@ use xtra::prelude::*;
 
 use sp_runtime::traits::Block as BlockT;
 
-use archive_kafka::{BlockPayload, KafkaConfig, KafkaError, KafkaProducer, MetadataPayload};
+use archive_kafka::{payload::*, KafkaConfig, KafkaError, KafkaProducer};
 
-use crate::message::{BlockMessage, Die, MetadataMessage};
+use crate::message::{BestBlockMessage, BlockMessage, Die, FinalizedBlockMessage, MetadataMessage};
 
 pub struct KafkaActor<Block: BlockT> {
     producer: KafkaProducer,
@@ -46,6 +46,34 @@ impl<Block: BlockT> Handler<BlockMessage<Block>> for KafkaActor<Block> {
         _: &mut Context<Self>,
     ) -> <BlockMessage<Block> as Message>::Result {
         let payload = BlockPayload::from(message);
+        if let Err(err) = self.producer.send(payload).await {
+            log::error!(target: "actor", "{}", err);
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl<Block: BlockT> Handler<BestBlockMessage<Block>> for KafkaActor<Block> {
+    async fn handle(
+        &mut self,
+        message: BestBlockMessage<Block>,
+        _: &mut Context<Self>,
+    ) -> <BestBlockMessage<Block> as Message>::Result {
+        let payload = BestBlockPayload::from(message);
+        if let Err(err) = self.producer.send(payload).await {
+            log::error!(target: "actor", "{}", err);
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl<Block: BlockT> Handler<FinalizedBlockMessage<Block>> for KafkaActor<Block> {
+    async fn handle(
+        &mut self,
+        message: FinalizedBlockMessage<Block>,
+        _: &mut Context<Self>,
+    ) -> <BestBlockMessage<Block> as Message>::Result {
+        let payload = FinalizedBlockPayload::from(message);
         if let Err(err) = self.producer.send(payload).await {
             log::error!(target: "actor", "{}", err);
         }

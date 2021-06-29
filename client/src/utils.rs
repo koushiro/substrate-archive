@@ -172,7 +172,7 @@ where
             let hash = header.hash();
             log::debug!(
                 target: "client",
-                "Opened blockchain db, fetched {} = {:?} ({})",
+                "Fetched {} = {:?} ({})",
                 desc,
                 hash,
                 header.number()

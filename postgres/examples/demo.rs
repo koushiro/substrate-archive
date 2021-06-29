@@ -29,7 +29,9 @@ async fn main() -> Result<(), SqlxError> {
     let does_exist = db.check_if_metadata_exists(0).await?;
     log::info!("Metadata {} exists: {}", 0, does_exist);
 
-    let finalized_block = db.finalized_block().await?;
+    let best_block = db.best_block_num().await?;
+    assert_eq!(best_block, None);
+    let finalized_block = db.finalized_block_num().await?;
     assert_eq!(finalized_block, None);
 
     for i in 0..=u8::MAX {
@@ -58,6 +60,12 @@ async fn main() -> Result<(), SqlxError> {
             .collect::<Vec<_>>();
         let _ = db.insert(storages).await?;
 
+        let best_block = BestBlockModel {
+            block_num: u32::from(i),
+            block_hash: vec![i],
+        };
+        let _ = db.insert(best_block).await?;
+
         let finalized_block = FinalizedBlockModel {
             block_num: u32::from(i),
             block_hash: vec![i],
@@ -68,11 +76,12 @@ async fn main() -> Result<(), SqlxError> {
     let max_block_num = db.max_block_num().await?;
     log::info!("Max block num: {:?}", max_block_num);
 
-    let finalized_block = db.finalized_block().await?.unwrap();
+    let best_block_num = db.best_block_num().await?.unwrap();
+    let finalized_block_num = db.finalized_block_num().await?.unwrap();
     log::info!(
-        "Finalized block num: {}, hash = 0x{}",
-        finalized_block.block_num,
-        hex::encode(&finalized_block.block_hash)
+        "Best block num: {}, Finalized block num: {}",
+        best_block_num,
+        finalized_block_num,
     );
 
     Ok(())

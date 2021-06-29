@@ -4,6 +4,7 @@ members = [
   "kafka",
   "postgres",
   "actor",
+  "primitives",
 ]
 
 [patch.crates-io]
@@ -72,6 +73,7 @@ archive-client = { path = "./client" }
 archive-actor = { path = "./actor" }
 archive-postgres = { path = "./postgres" }
 archive-kafka = { path = "./kafka" }
+archive-primitives = { path = "./primitives" }
 
 # Polkadot / Kusama
 polkadot-runtime =  { git = "https://github.com/paritytech/polkadot", tag = "v0.9.7", optional = true }

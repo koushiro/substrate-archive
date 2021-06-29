@@ -46,6 +46,12 @@ where
 }
 
 #[derive(Clone, Debug, Serialize)]
+pub struct BestBlockPayload<Block: BlockT> {
+    pub block_num: <Block::Header as HeaderT>::Number,
+    pub block_hash: <Block::Header as HeaderT>::Hash,
+}
+
+#[derive(Clone, Debug, Serialize)]
 pub struct FinalizedBlockPayload<Block: BlockT> {
     pub block_num: <Block::Header as HeaderT>::Number,
     pub block_hash: <Block::Header as HeaderT>::Hash,
@@ -76,6 +82,12 @@ pub struct BlockPayloadForDemo {
 
     pub main_changes: HashMap<StorageKey, Option<StorageData>>,
     pub child_changes: HashMap<StorageKey, HashMap<StorageKey, Option<StorageData>>>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct BestBlockPayloadDemo {
+    pub block_num: u32,
+    pub block_hash: String,
 }
 
 #[derive(Clone, Debug, Serialize)]

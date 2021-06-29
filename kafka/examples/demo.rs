@@ -1,9 +1,7 @@
-use std::collections::HashMap;
-
 use archive_kafka::{
-    payload::{BlockPayloadForDemo, FinalizedBlockPayloadDemo, MetadataPayloadForDemo},
-    KafkaConfig, KafkaError, KafkaProducer, KafkaTopicConfig, StorageData, StorageKey,
+    payload::*, KafkaConfig, KafkaError, KafkaProducer, KafkaTopicConfig, StorageData, StorageKey,
 };
+use std::collections::HashMap;
 
 #[tokio::main]
 async fn main() -> Result<(), KafkaError> {
@@ -14,6 +12,7 @@ async fn main() -> Result<(), KafkaError> {
         topic: KafkaTopicConfig {
             metadata: "polkadot-metadata".into(),
             block: "polkadot-block".into(),
+            best_block: "polkadot-best-block".into(),
             finalized_block: "polkadot-finalized-block".into(),
         },
         rdkafka: {
@@ -55,14 +54,19 @@ async fn main() -> Result<(), KafkaError> {
             },
             child_changes: HashMap::new(),
         };
-        producer.send(block).await?
-    }
+        producer.send(block).await?;
 
-    let finalized_block = FinalizedBlockPayloadDemo {
-        block_num: 1,
-        block_hash: "0x00".into(),
-    };
-    producer.send(finalized_block).await?;
+        let best_block = BestBlockPayloadDemo {
+            block_num: i,
+            block_hash: "0x00".into(),
+        };
+        producer.send(best_block).await?;
+        let finalized_block = FinalizedBlockPayloadDemo {
+            block_num: i,
+            block_hash: "0x00".into(),
+        };
+        producer.send(finalized_block).await?;
+    }
 
     Ok(())
 }

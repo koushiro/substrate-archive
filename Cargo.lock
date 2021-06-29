@@ -157,6 +157,7 @@ dependencies = [
  "archive-client",
  "archive-kafka",
  "archive-postgres",
+ "archive-primitives",
  "chrono",
  "ctrlc",
  "fdlimit",
@@ -190,6 +191,7 @@ dependencies = [
  "archive-kafka",
  "archive-postgres",
  "async-trait",
+ "futures 0.3.15",
  "hex",
  "log",
  "parity-scale-codec",
@@ -274,6 +276,13 @@ dependencies = [
  "serde_json",
  "sqlx",
  "tokio 1.7.1",
+]
+
+[[package]]
+name = "archive-primitives"
+version = "0.1.0"
+dependencies = [
+ "sp-runtime",
 ]
 
 [[package]]

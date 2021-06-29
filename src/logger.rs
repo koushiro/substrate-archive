@@ -75,12 +75,13 @@ impl LoggerConfig {
             // disable the debug log of runtime
             .level_for("runtime", log::LevelFilter::Info)
             .level_for("frame_executive", log::LevelFilter::Error)
+            .level_for("regalloc", log::LevelFilter::Warn)
             .level_for("cranelift_codegen", log::LevelFilter::Warn)
             .level_for("cranelift_wasm", log::LevelFilter::Warn)
             .format(move |out, message, record| {
                 out.finish(format_args!(
                     "{} [{}] {}: {}",
-                    Local::now().format("[%Y-%m-%d][%H:%M:%S]"),
+                    Local::now().format("[%Y-%m-%d][%H:%M:%S%.3f]"),
                     colors.color(record.level()),
                     record.target(),
                     message,
@@ -106,12 +107,13 @@ impl LoggerConfig {
                 // disable the debug log of runtime
                 .level_for("runtime", log::LevelFilter::Info)
                 .level_for("frame_executive", log::LevelFilter::Error)
+                .level_for("regalloc", log::LevelFilter::Warn)
                 .level_for("cranelift_codegen", log::LevelFilter::Warn)
                 .level_for("cranelift_wasm", log::LevelFilter::Warn)
                 .format(move |out, message, record| {
                     out.finish(format_args!(
                         "{} [{}] [{};{}] {}: {}",
-                        Local::now().format("[%Y-%m-%d][%H:%M:%S]"),
+                        Local::now().format("[%Y-%m-%d][%H:%M:%S%.3f]"),
                         record.level(),
                         record.file().unwrap_or_default(),
                         record.line().map(|l| l.to_string()).unwrap_or_default(),

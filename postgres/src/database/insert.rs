@@ -249,6 +249,38 @@ impl InsertModel for Vec<ChildStorageChangeModel> {
 }
 
 #[async_trait::async_trait]
+impl InsertModel for BestBlockModel {
+    async fn insert(self, conn: &mut PoolConnection<Postgres>) -> Result<u64, SqlxError> {
+        log::info!(
+            target: "postgres",
+            "Update best block, height = {}, hash = 0x{}",
+            self.block_num,
+            hex::encode(&self.block_hash)
+        );
+
+        let query: Query<'_, Postgres, PgArguments> = sqlx::query(
+            r#"
+            INSERT INTO best_block VALUES ($1, $2, $3)
+            ON CONFLICT (only_one) DO UPDATE SET
+                block_num = EXCLUDED.block_num,
+                block_hash = EXCLUDED.block_hash
+            "#,
+        )
+        .bind(true)
+        .bind(self.block_num)
+        .bind(self.block_hash);
+
+        let rows_affected = query.execute(conn).await?.rows_affected();
+        log::info!(
+            target: "postgres",
+            "Update best block, affected rows = {}",
+            rows_affected
+        );
+        Ok(rows_affected)
+    }
+}
+
+#[async_trait::async_trait]
 impl InsertModel for FinalizedBlockModel {
     async fn insert(self, conn: &mut PoolConnection<Postgres>) -> Result<u64, SqlxError> {
         log::info!(

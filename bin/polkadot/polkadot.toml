@@ -40,7 +40,12 @@ disable_statement_logging = false
 ##################################
 [kafka]
 queue_timeout = 0
-topic = { metadata = "polkadot-metadata", block = "polkadot-block", finalized_block = "polkadot-finalized-block" }
+
+[kafka.topic]
+metadata = "polkadot-metadata"
+block = "polkadot-block"
+best_block = "polkadot-best-block"
+finalized_block = "polkadot-finalized-block"
 
 ## https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
 ##
@@ -57,4 +62,4 @@ topic = { metadata = "polkadot-metadata", block = "polkadot-block", finalized_bl
 [kafka.rdkafka]
 "metadata.broker.list" = "localhost:9092" # or "bootstrap.servers" = "localhost:9092"
 "compression.codec" = "gzip" # "none" | "gzip" | "snappy" | "lz4" | "zstd"
-"message.max.bytes" = "10485760" # 10 MB
+"message.max.bytes" = "67108864" # 64 MB

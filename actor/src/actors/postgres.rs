@@ -4,15 +4,15 @@ use xtra::prelude::*;
 
 use sp_runtime::traits::Block as BlockT;
 
-use archive_postgres::{
-    query, BlockModel, ChildStorageChangeModel, MainStorageChangeModel, MetadataModel,
-    PostgresConfig, PostgresDb,
-};
+use archive_postgres::{model::*, query, PostgresConfig, PostgresDb};
 
 use crate::{
     actors::dispatch::Dispatcher,
     error::ActorError,
-    message::{BlockMessage, CheckIfMetadataExist, Die, MaxBlock, MetadataMessage},
+    message::{
+        BestBlock, BestBlockMessage, BlockMessage, CheckIfMetadataExist, Die, FinalizedBlock,
+        FinalizedBlockMessage, MaxBlock, MetadataMessage,
+    },
 };
 
 pub struct PostgresActor<Block: BlockT> {
@@ -50,7 +50,28 @@ impl<Block: BlockT> PostgresActor<Block> {
         ) = message.clone().into();
         self.db.insert(block).await?;
         self.db.insert(main_storage).await?;
+        // TODO: insert child storage into database.
+        // self.db.insert(_child_storage).await?;
         self.dispatcher.dispatch_block(message).await?;
+        Ok(())
+    }
+
+    async fn best_block_handler(&self, message: BestBlockMessage<Block>) -> Result<(), ActorError> {
+        self.db
+            .insert(BestBlockModel::from(message.clone()))
+            .await?;
+        self.dispatcher.dispatch_best_block(message).await?;
+        Ok(())
+    }
+
+    async fn finalized_block_handler(
+        &self,
+        message: FinalizedBlockMessage<Block>,
+    ) -> Result<(), ActorError> {
+        self.db
+            .insert(FinalizedBlockModel::from(message.clone()))
+            .await?;
+        self.dispatcher.dispatch_finalized_block(message).await?;
         Ok(())
     }
 }
@@ -85,6 +106,32 @@ impl<Block: BlockT> Handler<BlockMessage<Block>> for PostgresActor<Block> {
 }
 
 #[async_trait::async_trait]
+impl<Block: BlockT> Handler<BestBlockMessage<Block>> for PostgresActor<Block> {
+    async fn handle(
+        &mut self,
+        message: BestBlockMessage<Block>,
+        _ctx: &mut Context<Self>,
+    ) -> <BestBlockMessage<Block> as Message>::Result {
+        if let Err(err) = self.best_block_handler(message).await {
+            log::error!(target: "actor", "{}", err);
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl<Block: BlockT> Handler<FinalizedBlockMessage<Block>> for PostgresActor<Block> {
+    async fn handle(
+        &mut self,
+        message: FinalizedBlockMessage<Block>,
+        _ctx: &mut Context<Self>,
+    ) -> <FinalizedBlockMessage<Block> as Message>::Result {
+        if let Err(err) = self.finalized_block_handler(message).await {
+            log::error!(target: "actor", "{}", err);
+        }
+    }
+}
+
+#[async_trait::async_trait]
 impl<Block: BlockT> Handler<CheckIfMetadataExist> for PostgresActor<Block> {
     async fn handle(
         &mut self,
@@ -108,6 +155,40 @@ impl<Block: BlockT> Handler<MaxBlock> for PostgresActor<Block> {
         _: MaxBlock,
         _: &mut Context<Self>,
     ) -> <MaxBlock as Message>::Result {
+        match self.db.max_block_num().await {
+            Ok(num) => num,
+            Err(err) => {
+                log::error!(target: "actor", "{}", err);
+                None
+            }
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl<Block: BlockT> Handler<BestBlock> for PostgresActor<Block> {
+    async fn handle(
+        &mut self,
+        _: BestBlock,
+        _: &mut Context<Self>,
+    ) -> <BestBlock as Message>::Result {
+        match self.db.max_block_num().await {
+            Ok(num) => num,
+            Err(err) => {
+                log::error!(target: "actor", "{}", err);
+                None
+            }
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl<Block: BlockT> Handler<FinalizedBlock> for PostgresActor<Block> {
+    async fn handle(
+        &mut self,
+        _: FinalizedBlock,
+        _: &mut Context<Self>,
+    ) -> <FinalizedBlock as Message>::Result {
         match self.db.max_block_num().await {
             Ok(num) => num,
             Err(err) => {

@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, sync::Arc};
+use std::{marker::PhantomData, sync::Arc, time::Instant};
 
 use sc_client_api::backend::{Backend, StateBackendFor};
 use sc_executor::NativeExecutionDispatch;
@@ -15,24 +15,21 @@ use archive_postgres::migrate;
 use crate::{cli::ArchiveConfig, error::ArchiveError};
 
 pub trait Archive {
-    type Error;
+    /// start driving the execution of the archive.
+    fn drive(&self) -> Result<(), ArchiveError>;
 
-    fn drive(&self) -> Result<(), Self::Error>;
+    /// shutdown the archive system.
+    fn shutdown(self) -> Result<(), ArchiveError>;
 
-    fn shutdown(self) -> Result<(), Self::Error>;
-
-    fn boxed_shutdown(self: Box<Self>) -> Result<(), Self::Error>;
+    /// Shutdown the archive system when self is boxed (useful when erasing the types of the runtime).
+    fn boxed_shutdown(self: Box<Self>) -> Result<(), ArchiveError>;
 }
 
-pub struct ArchiveSystem<Block, Client, RA>
-where
-    Block: BlockT,
-{
-    backend: Arc<ArchiveBackend<Block>>,
+pub struct ArchiveSystem<Block, Client, RA> {
     start_tx: flume::Sender<()>,
     kill_tx: flume::Sender<()>,
     handle: jod_thread::JoinHandle<Result<(), ArchiveError>>,
-    _marker: PhantomData<(Client, RA)>,
+    _marker: PhantomData<(Block, Client, RA)>,
 }
 
 impl<Block, Client, RA> ArchiveSystem<Block, Client, RA>
@@ -52,21 +49,19 @@ where
         let (start_tx, start_rx) = flume::bounded(1);
         let (kill_tx, kill_rx) = flume::bounded(1);
 
-        let runtime = tokio::runtime::Runtime::new().expect("cannot create async runtime");
-
+        let runtime = tokio::runtime::Runtime::new()?;
         // execute sql migrations before spawning tht actors.
         runtime.block_on(migrate(&config.postgres.uri))?;
 
-        let backend_clone = backend.clone();
+        log::info!(target: "archive", "Start archive task");
         let handle = jod_thread::spawn(move || {
-            let _ = start_rx.recv();
-            log::info!(target: "archive", "Start archive main loop");
-            runtime.block_on(Self::main_loop(backend_clone, client, config, kill_rx))?;
+            start_rx.recv().expect("Start archive work loop");
+            log::info!(target: "archive", "Start archive work loop");
+            runtime.block_on(Self::work(backend, client, config, kill_rx))?;
             Ok(())
         });
 
         Ok(Self {
-            backend,
             start_tx,
             kill_tx,
             handle,
@@ -74,7 +69,18 @@ where
         })
     }
 
-    async fn main_loop(
+    fn drive(&self) -> Result<(), ArchiveError> {
+        self.start_tx.send(())?;
+        Ok(())
+    }
+
+    fn shutdown(self) -> Result<(), ArchiveError> {
+        self.kill_tx.send(())?;
+        self.handle.join()?;
+        Ok(())
+    }
+
+    async fn work(
         backend: Arc<ArchiveBackend<Block>>,
         client: Arc<Client>,
         config: ActorConfig,
@@ -82,25 +88,11 @@ where
     ) -> Result<(), ArchiveError> {
         log::info!(target: "archive", "Spawn all actors");
         let actors = Actors::spawn(backend, client, config).await?;
+        actors.tick_interval().await?;
         // waiting until the kill signal is received.
         let _ = kill_rx.recv_async().await;
         log::info!(target: "archive", "Stop all actors");
         actors.kill().await?;
-        Ok(())
-    }
-
-    pub fn backend(&self) -> Arc<ArchiveBackend<Block>> {
-        self.backend.clone()
-    }
-
-    pub fn drive(&self) -> Result<(), ArchiveError> {
-        self.start_tx.send(())?;
-        Ok(())
-    }
-
-    pub fn shutdown(self) -> Result<(), ArchiveError> {
-        self.kill_tx.send(())?;
-        self.handle.join()?;
         Ok(())
     }
 }
@@ -114,23 +106,20 @@ where
         + MetadataApi<Block>
         + ApiExt<Block, StateBackend = StateBackendFor<ArchiveBackend<Block>, Block>>,
 {
-    type Error = ArchiveError;
-
-    fn drive(&self) -> Result<(), Self::Error> {
-        self.start_tx.send(())?;
+    fn drive(&self) -> Result<(), ArchiveError> {
+        ArchiveSystem::drive(self)?;
         Ok(())
     }
 
-    fn shutdown(self) -> Result<(), Self::Error> {
-        self.kill_tx.send(())?;
-        self.handle.join()?;
+    fn shutdown(self) -> Result<(), ArchiveError> {
+        let now = Instant::now();
+        ArchiveSystem::shutdown(self)?;
+        log::debug!(target: "archive", "Shutdown archive took {}ms", now.elapsed().as_millis());
         Ok(())
     }
 
-    fn boxed_shutdown(self: Box<Self>) -> Result<(), Self::Error> {
-        self.kill_tx.send(())?;
-        self.handle.join()?;
-        Ok(())
+    fn boxed_shutdown(self: Box<Self>) -> Result<(), ArchiveError> {
+        self.shutdown()
     }
 }
 
@@ -155,11 +144,7 @@ where
         }
     }
 
-    #[allow(clippy::type_complexity)]
-    pub fn build(
-        self,
-        genesis: &dyn BuildStorage,
-    ) -> Result<ArchiveSystem<Block, ArchiveClient<Block, Executor, RA>, RA>, ArchiveError> {
+    pub fn build(self, genesis: &dyn BuildStorage) -> Result<impl Archive, ArchiveError> {
         let backend = new_secondary_rocksdb_backend(self.config.client.rocksdb.clone())?;
         let backend = Arc::new(backend);
         let client =
@@ -168,7 +153,7 @@ where
 
         Self::startup_info(&*client)?;
 
-        let system = ArchiveSystem::new(
+        let system = ArchiveSystem::<_, _, RA>::new(
             backend,
             client,
             ActorConfig {

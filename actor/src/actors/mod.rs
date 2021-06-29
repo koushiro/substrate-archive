@@ -104,6 +104,25 @@ where
         })
     }
 
+    pub async fn tick_interval(&self) -> Result<(), ActorError> {
+        // messages that only need to be sent once
+        self.block.send(ReIndex).await?;
+        let block = self.block.clone();
+        tokio::task::spawn(async move {
+            loop {
+                let fut = (
+                    Box::pin(block.send(Crawl)),
+                    Box::pin(block.send(BestAndFinalized)),
+                );
+                if let (Err(_), Err(_)) = futures::future::join(fut.0, fut.1).await {
+                    log::error!(target: "actor", "Block actor error");
+                    break;
+                }
+            }
+        });
+        Ok(())
+    }
+
     pub async fn kill(self) -> Result<(), ActorError> {
         self.block.send(Die).await?;
         self.metadata.send(Die).await?;

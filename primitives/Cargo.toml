@@ -1,0 +1,8 @@
+[package]
+name = "archive-primitives"
+version = "0.1.0"
+authors = ["Patract <https://github.com/patractlabs>"]
+edition = "2018"
+
+[dependencies]
+sp-runtime = "3.0"

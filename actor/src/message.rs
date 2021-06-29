@@ -200,6 +200,34 @@ impl<Block: BlockT> From<BlockMessage<Block>> for archive_kafka::BlockPayload<Bl
 }
 
 #[derive(Clone, Debug)]
+pub struct BestBlockMessage<Block: BlockT> {
+    pub block_num: <Block::Header as HeaderT>::Number,
+    pub block_hash: Block::Hash,
+}
+
+impl<Block: BlockT> xtra::Message for BestBlockMessage<Block> {
+    type Result = ();
+}
+
+impl<Block: BlockT> From<BestBlockMessage<Block>> for archive_postgres::BestBlockModel {
+    fn from(best_block: BestBlockMessage<Block>) -> Self {
+        Self {
+            block_num: best_block.block_num.saturated_into(),
+            block_hash: best_block.block_hash.as_ref().to_vec(),
+        }
+    }
+}
+
+impl<Block: BlockT> From<BestBlockMessage<Block>> for archive_kafka::BestBlockPayload<Block> {
+    fn from(best_block: BestBlockMessage<Block>) -> Self {
+        Self {
+            block_num: best_block.block_num,
+            block_hash: best_block.block_hash,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct FinalizedBlockMessage<Block: BlockT> {
     pub block_num: <Block::Header as HeaderT>::Number,
     pub block_hash: Block::Hash,
@@ -240,28 +268,42 @@ impl xtra::Message for CheckIfMetadataExist {
 
 #[derive(Copy, Clone, Debug)]
 pub struct MaxBlock;
-
 impl xtra::Message for MaxBlock {
     type Result = Option<u32>;
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct ReIndex;
+pub struct BestBlock;
+impl xtra::Message for BestBlock {
+    type Result = Option<u32>;
+}
 
+#[derive(Copy, Clone, Debug)]
+pub struct FinalizedBlock;
+impl xtra::Message for FinalizedBlock {
+    type Result = Option<u32>;
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct ReIndex;
 impl xtra::Message for ReIndex {
     type Result = ();
 }
 
 #[derive(Copy, Clone, Debug)]
 pub struct Crawl;
-
 impl xtra::Message for Crawl {
     type Result = ();
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct Die;
+pub struct BestAndFinalized;
+impl xtra::Message for BestAndFinalized {
+    type Result = ();
+}
 
+#[derive(Copy, Clone, Debug)]
+pub struct Die;
 impl xtra::Message for Die {
     type Result = ();
 }

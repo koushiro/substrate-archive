@@ -6,32 +6,48 @@ use xtra::{prelude::*, Disconnected};
 
 use sp_runtime::traits::{Block as BlockT, Header as HeaderT};
 
-use crate::message::{BlockMessage, Die, MetadataMessage};
+use crate::message::{BestBlockMessage, BlockMessage, Die, FinalizedBlockMessage, MetadataMessage};
 
 pub trait DispatchActor<Block: BlockT>:
-    Actor + Handler<MetadataMessage<Block>> + Handler<BlockMessage<Block>> + Handler<Die>
+    Actor
+    + Handler<MetadataMessage<Block>>
+    + Handler<BlockMessage<Block>>
+    + Handler<BestBlockMessage<Block>>
+    + Handler<FinalizedBlockMessage<Block>>
+    + Handler<Die>
 {
 }
 
 impl<Block, T> DispatchActor<Block> for T
 where
     Block: BlockT,
-    T: Actor + Handler<MetadataMessage<Block>> + Handler<BlockMessage<Block>> + Handler<Die>,
+    T: Actor
+        + Handler<MetadataMessage<Block>>
+        + Handler<BlockMessage<Block>>
+        + Handler<BestBlockMessage<Block>>
+        + Handler<FinalizedBlockMessage<Block>>
+        + Handler<Die>,
 {
 }
 
+type MessageChannelMap<M> = HashMap<&'static str, Box<dyn StrongMessageChannel<M>>>;
+
 pub struct Dispatcher<Block: BlockT> {
-    metadata_channels: HashMap<&'static str, Box<dyn StrongMessageChannel<MetadataMessage<Block>>>>,
-    block_channels: HashMap<&'static str, Box<dyn StrongMessageChannel<BlockMessage<Block>>>>,
-    die_channels: HashMap<&'static str, Box<dyn StrongMessageChannel<Die>>>,
+    metadata: MessageChannelMap<MetadataMessage<Block>>,
+    block: MessageChannelMap<BlockMessage<Block>>,
+    best_block: MessageChannelMap<BestBlockMessage<Block>>,
+    finalized_block: MessageChannelMap<FinalizedBlockMessage<Block>>,
+    die: MessageChannelMap<Die>,
 }
 
 impl<Block: BlockT> Dispatcher<Block> {
     pub fn new() -> Self {
         Self {
-            metadata_channels: HashMap::new(),
-            block_channels: HashMap::new(),
-            die_channels: HashMap::new(),
+            metadata: HashMap::new(),
+            block: HashMap::new(),
+            best_block: HashMap::new(),
+            finalized_block: HashMap::new(),
+            die: HashMap::new(),
         }
     }
 
@@ -40,9 +56,11 @@ impl<Block: BlockT> Dispatcher<Block> {
         name: &'static str,
         addr: Address<D>,
     ) -> &mut Self {
-        self.metadata_channels.insert(name, Box::new(addr.clone()));
-        self.block_channels.insert(name, Box::new(addr.clone()));
-        self.die_channels.insert(name, Box::new(addr));
+        self.metadata.insert(name, Box::new(addr.clone()));
+        self.block.insert(name, Box::new(addr.clone()));
+        self.best_block.insert(name, Box::new(addr.clone()));
+        self.finalized_block.insert(name, Box::new(addr.clone()));
+        self.die.insert(name, Box::new(addr));
         self
     }
 
@@ -50,7 +68,7 @@ impl<Block: BlockT> Dispatcher<Block> {
         &self,
         message: MetadataMessage<Block>,
     ) -> Result<(), Disconnected> {
-        for (name, dispatcher) in &self.metadata_channels {
+        for (name, dispatcher) in &self.metadata {
             log::debug!(
                 target: "actor",
                 "Dispatch `Metadata` message into `{}`, version = {}",
@@ -63,7 +81,7 @@ impl<Block: BlockT> Dispatcher<Block> {
     }
 
     pub async fn dispatch_block(&self, message: BlockMessage<Block>) -> Result<(), Disconnected> {
-        for (name, dispatcher) in &self.block_channels {
+        for (name, dispatcher) in &self.block {
             log::debug!(
                 target: "actor",
                 "Dispatch `Block` message into `{}`, height = {}",
@@ -75,8 +93,40 @@ impl<Block: BlockT> Dispatcher<Block> {
         Ok(())
     }
 
+    pub async fn dispatch_best_block(
+        &self,
+        message: BestBlockMessage<Block>,
+    ) -> Result<(), Disconnected> {
+        for (name, dispatcher) in &self.best_block {
+            log::debug!(
+                target: "actor",
+                "Dispatch `BestBlock` message into `{}`, height = {}",
+                name,
+                message.block_num
+            );
+            dispatcher.send(message.clone()).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn dispatch_finalized_block(
+        &self,
+        message: FinalizedBlockMessage<Block>,
+    ) -> Result<(), Disconnected> {
+        for (name, dispatcher) in &self.finalized_block {
+            log::debug!(
+                target: "actor",
+                "Dispatch `FinalizedBlock` message into `{}`, height = {}",
+                name,
+                message.block_num
+            );
+            dispatcher.send(message.clone()).await?;
+        }
+        Ok(())
+    }
+
     pub async fn dispatch_die(&self, message: Die) -> Result<(), Disconnected> {
-        for (name, dispatcher) in &self.die_channels {
+        for (name, dispatcher) in &self.die {
             log::debug!(target: "actor", "Dispatch `Die` message into `{}`", name);
             dispatcher.send(message).await?;
         }

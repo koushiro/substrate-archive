@@ -42,6 +42,12 @@ pub struct ChildStorageChangeModel {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, FromRow)]
+pub struct BestBlockModel {
+    pub block_num: u32,
+    pub block_hash: Vec<u8>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, FromRow)]
 pub struct FinalizedBlockModel {
     pub block_num: u32,
     pub block_hash: Vec<u8>,

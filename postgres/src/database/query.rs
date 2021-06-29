@@ -4,8 +4,6 @@ use sqlx::{
     Arguments, Error as SqlxError, FromRow,
 };
 
-use crate::model::FinalizedBlockModel;
-
 pub async fn check_if_metadata_exists(
     spec_version: u32,
     conn: &mut PoolConnection<Postgres>,
@@ -40,21 +38,24 @@ pub async fn max_block_num(conn: &mut PoolConnection<Postgres>) -> Result<Option
     Ok(max.max.map(|v| v as u32))
 }
 
-pub async fn finalized_block(
-    conn: &mut PoolConnection<Postgres>,
-) -> Result<Option<FinalizedBlockModel>, SqlxError> {
-    #[derive(Clone, Debug, Eq, PartialEq, FromRow)]
-    struct FinalizedBlock {
-        block_num: i32,
-        block_hash: Vec<u8>,
-    }
+#[derive(Clone, Debug, Eq, PartialEq, FromRow)]
+struct BlockForQuery {
+    block_num: i32,
+}
 
-    let finalized_block: Option<FinalizedBlock> =
-        sqlx::query_as(r#"SELECT block_num, block_hash FROM finalized_block"#)
+pub async fn best_block_num(conn: &mut PoolConnection<Postgres>) -> Result<Option<u32>, SqlxError> {
+    let best_block: Option<BlockForQuery> = sqlx::query_as(r#"SELECT block_num FROM best_block"#)
+        .fetch_optional(conn)
+        .await?;
+    Ok(best_block.map(|block| block.block_num as u32))
+}
+
+pub async fn finalized_block_num(
+    conn: &mut PoolConnection<Postgres>,
+) -> Result<Option<u32>, SqlxError> {
+    let best_block: Option<BlockForQuery> =
+        sqlx::query_as(r#"SELECT block_num FROM finalized_block"#)
             .fetch_optional(conn)
             .await?;
-    Ok(finalized_block.map(|block| FinalizedBlockModel {
-        block_num: block.block_num as u32,
-        block_hash: block.block_hash,
-    }))
+    Ok(best_block.map(|block| block.block_num as u32))
 }

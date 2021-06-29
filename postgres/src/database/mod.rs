@@ -13,7 +13,7 @@ use sqlx::{
 };
 
 use self::insert::InsertModel;
-use crate::{config::PostgresConfig, model::FinalizedBlockModel};
+use crate::config::PostgresConfig;
 
 #[derive(Clone)]
 pub struct PostgresDb {
@@ -72,9 +72,15 @@ impl PostgresDb {
         Ok(max)
     }
 
-    pub async fn finalized_block(&self) -> Result<Option<FinalizedBlockModel>, SqlxError> {
+    pub async fn best_block_num(&self) -> Result<Option<u32>, SqlxError> {
         let mut conn = self.conn().await?;
-        let finalized_block = query::finalized_block(&mut conn).await?;
+        let best_block = query::best_block_num(&mut conn).await?;
+        Ok(best_block)
+    }
+
+    pub async fn finalized_block_num(&self) -> Result<Option<u32>, SqlxError> {
+        let mut conn = self.conn().await?;
+        let finalized_block = query::finalized_block_num(&mut conn).await?;
         Ok(finalized_block)
     }
 }

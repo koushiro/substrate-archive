@@ -8,13 +8,7 @@ use rdkafka::{
 
 use sp_runtime::traits::Block as BlockT;
 
-use crate::{
-    config::KafkaConfig,
-    payload::{
-        BlockPayload, BlockPayloadForDemo, FinalizedBlockPayload, FinalizedBlockPayloadDemo,
-        MetadataPayload, MetadataPayloadForDemo,
-    },
-};
+use crate::{config::KafkaConfig, payload::*};
 
 #[derive(Clone)]
 pub struct KafkaProducer {
@@ -127,6 +121,22 @@ impl<B: BlockT> SendPayload for BlockPayload<B> {
 }
 
 #[async_trait::async_trait]
+impl<B: BlockT> SendPayload for BestBlockPayload<B> {
+    async fn send(self, producer: &KafkaProducer) -> Result<(), KafkaError> {
+        log::info!(
+            target: "kafka",
+            "Publish best block to kafka, number = {}, hash = {}",
+            self.block_num,
+            self.block_hash
+        );
+        let topic = &producer.config.topic.best_block;
+        let payload = serde_json::to_string(&self)
+            .expect("Serialize best block payload shouldn't be fail; qed");
+        producer.send_inner(&topic, &payload, None).await
+    }
+}
+
+#[async_trait::async_trait]
 impl<B: BlockT> SendPayload for FinalizedBlockPayload<B> {
     async fn send(self, producer: &KafkaProducer) -> Result<(), KafkaError> {
         log::info!(
@@ -172,6 +182,22 @@ impl SendPayload for BlockPayloadForDemo {
             .expect("Serialize best block payload shouldn't be fail; qed");
         let key = self.block_num.to_string();
         producer.send_inner(&topic, &payload, Some(&key)).await
+    }
+}
+
+#[async_trait::async_trait]
+impl SendPayload for BestBlockPayloadDemo {
+    async fn send(self, producer: &KafkaProducer) -> Result<(), KafkaError> {
+        log::info!(
+            target: "kafka",
+            "Publish best block to kafka, number = {}, hash = {}",
+            self.block_num,
+            self.block_hash
+        );
+        let topic = &producer.config.topic.best_block;
+        let payload = serde_json::to_string(&self)
+            .expect("Serialize best block payload shouldn't be fail; qed");
+        producer.send_inner(&topic, &payload, None).await
     }
 }
 

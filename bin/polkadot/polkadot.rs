@@ -3,10 +3,14 @@ use std::sync::{
     Arc,
 };
 
-use sc_chain_spec::{ChainSpec, GenericChainSpec};
+use serde::{Deserialize, Serialize};
+
+use sc_chain_spec::{ChainSpec, ChainSpecExtension, GenericChainSpec};
+use sc_client_api::{BadBlocks, ForkBlocks};
 use sc_executor::native_executor_instance;
 
-use archive::{ArchiveCli, ArchiveError, ArchiveSystemBuilder, Block, Extensions};
+use archive::{Archive, ArchiveCli, ArchiveError, ArchiveSystemBuilder};
+use archive_primitives::Block;
 
 native_executor_instance!(
     pub PolkadotExecutor,
@@ -14,6 +18,19 @@ native_executor_instance!(
     polkadot_runtime::native_version,
     frame_benchmarking::benchmarking::HostFunctions,
 );
+
+/// Node `ChainSpec` extensions.
+///
+/// Additional parameters for some Substrate core modules,
+/// customizable from the chain spec.
+#[derive(Clone, Default, Serialize, Deserialize, ChainSpecExtension)]
+#[serde(rename_all = "camelCase")]
+pub struct Extensions {
+    /// Block numbers with known hashes.
+    pub fork_blocks: ForkBlocks<Block>,
+    /// Known bad block hashes.
+    pub bad_blocks: BadBlocks<Block>,
+}
 
 /// The `ChainSpec` parametrised for the polkadot runtime.
 type PolkadotChainSpec = GenericChainSpec<polkadot_runtime::GenesisConfig, Extensions>;

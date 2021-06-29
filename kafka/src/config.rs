@@ -13,5 +13,6 @@ pub struct KafkaConfig {
 pub struct KafkaTopicConfig {
     pub metadata: String,
     pub block: String,
+    pub best_block: String,
     pub finalized_block: String,
 }

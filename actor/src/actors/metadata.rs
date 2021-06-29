@@ -3,7 +3,7 @@ use xtra::prelude::*;
 use std::sync::Arc;
 
 use sp_api::{ApiError, BlockId, Metadata as MetadataApi, ProvideRuntimeApi};
-use sp_core::{Bytes, OpaqueMetadata};
+use sp_core::OpaqueMetadata;
 use sp_runtime::traits::{Block as BlockT, Header as HeaderT};
 
 use crate::{
@@ -27,16 +27,15 @@ where
     }
 }
 
+type MetaApi<Block> = Arc<dyn GetMetadata<Block>>;
+
 pub struct MetadataActor<Block: BlockT> {
-    api: Arc<dyn GetMetadata<Block>>,
+    api: MetaApi<Block>,
     db: Address<PostgresActor<Block>>,
 }
 
-impl<Block> MetadataActor<Block>
-where
-    Block: BlockT,
-{
-    pub fn new(api: Arc<dyn GetMetadata<Block>>, db: Address<PostgresActor<Block>>) -> Self {
+impl<Block: BlockT> MetadataActor<Block> {
+    pub fn new(api: MetaApi<Block>, db: Address<PostgresActor<Block>>) -> Self {
         Self { api, db }
     }
 
@@ -62,7 +61,7 @@ where
                 spec_version,
                 block_num,
                 block_hash,
-                meta: Bytes::from(meta).0,
+                meta: meta.to_vec(),
             };
             self.db.send(metadata).await?;
         }
@@ -82,13 +81,10 @@ where
 }
 
 #[async_trait::async_trait]
-impl<Block> Actor for MetadataActor<Block> where Block: BlockT {}
+impl<Block: BlockT> Actor for MetadataActor<Block> {}
 
 #[async_trait::async_trait]
-impl<Block> Handler<BlockMessage<Block>> for MetadataActor<Block>
-where
-    Block: BlockT,
-{
+impl<Block: BlockT> Handler<BlockMessage<Block>> for MetadataActor<Block> {
     async fn handle(
         &mut self,
         message: BlockMessage<Block>,
@@ -101,10 +97,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl<Block> Handler<Die> for MetadataActor<Block>
-where
-    Block: BlockT,
-{
+impl<Block: BlockT> Handler<Die> for MetadataActor<Block> {
     async fn handle(&mut self, _: Die, ctx: &mut Context<Self>) -> <Die as Message>::Result {
         log::info!(target: "actor", "Stopping Metadata Actor");
         ctx.stop();
