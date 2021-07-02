@@ -53,10 +53,10 @@ where
         // execute sql migrations before spawning tht actors.
         runtime.block_on(migrate(&config.postgres.uri))?;
 
-        log::info!(target: "archive", "Start archive task");
+        log::info!(target: "archive", "Start Archive Task");
         let handle = jod_thread::spawn(move || {
-            start_rx.recv().expect("Start archive work loop");
-            log::info!(target: "archive", "Start archive work loop");
+            start_rx.recv().expect("Start Archive Work Loop");
+            log::info!(target: "archive", "Start Archive Work Loop");
             runtime.block_on(Self::work(backend, client, config, kill_rx))?;
             Ok(())
         });
@@ -86,13 +86,14 @@ where
         config: ActorConfig,
         kill_rx: flume::Receiver<()>,
     ) -> Result<(), ArchiveError> {
-        log::info!(target: "archive", "Spawn all actors");
+        log::info!(target: "archive", "Spawn All Actors");
         let actors = Actors::spawn(backend, client, config).await?;
         actors.tick_interval().await?;
         // waiting until the kill signal is received.
         let _ = kill_rx.recv_async().await;
-        log::info!(target: "archive", "Stop all actors");
+        log::info!(target: "archive", "Stopping All Actors");
         actors.kill().await?;
+        log::info!(target: "archive", "Stopped All Actors");
         Ok(())
     }
 }

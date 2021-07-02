@@ -7,11 +7,11 @@ use sp_runtime::traits::Block as BlockT;
 use archive_postgres::{model::*, query, PostgresConfig, PostgresDb};
 
 use crate::{
-    actors::dispatch::Dispatcher,
+    actors::dispatcher::Dispatcher,
     error::ActorError,
     message::{
-        BestBlock, BestBlockMessage, BlockMessage, CheckIfMetadataExist, Die, FinalizedBlock,
-        FinalizedBlockMessage, MaxBlock, MetadataMessage,
+        BestBlockMessage, BlockMessage, DbBestBlock, DbFinalizedBlock, DbIfMetadataExist,
+        DbMaxBlock, Die, FinalizedBlockMessage, MetadataMessage,
     },
 };
 
@@ -132,13 +132,13 @@ impl<Block: BlockT> Handler<FinalizedBlockMessage<Block>> for PostgresActor<Bloc
 }
 
 #[async_trait::async_trait]
-impl<Block: BlockT> Handler<CheckIfMetadataExist> for PostgresActor<Block> {
+impl<Block: BlockT> Handler<DbIfMetadataExist> for PostgresActor<Block> {
     async fn handle(
         &mut self,
-        message: CheckIfMetadataExist,
+        message: DbIfMetadataExist,
         _ctx: &mut Context<Self>,
-    ) -> <CheckIfMetadataExist as Message>::Result {
-        match self.db.check_if_metadata_exists(message.spec_version).await {
+    ) -> <DbIfMetadataExist as Message>::Result {
+        match self.db.if_metadata_exists(message.spec_version).await {
             Ok(does_exist) => does_exist,
             Err(err) => {
                 log::error!(target: "actor", "{}", err);
@@ -149,12 +149,12 @@ impl<Block: BlockT> Handler<CheckIfMetadataExist> for PostgresActor<Block> {
 }
 
 #[async_trait::async_trait]
-impl<Block: BlockT> Handler<MaxBlock> for PostgresActor<Block> {
+impl<Block: BlockT> Handler<DbMaxBlock> for PostgresActor<Block> {
     async fn handle(
         &mut self,
-        _: MaxBlock,
+        _: DbMaxBlock,
         _: &mut Context<Self>,
-    ) -> <MaxBlock as Message>::Result {
+    ) -> <DbMaxBlock as Message>::Result {
         match self.db.max_block_num().await {
             Ok(num) => num,
             Err(err) => {
@@ -166,13 +166,13 @@ impl<Block: BlockT> Handler<MaxBlock> for PostgresActor<Block> {
 }
 
 #[async_trait::async_trait]
-impl<Block: BlockT> Handler<BestBlock> for PostgresActor<Block> {
+impl<Block: BlockT> Handler<DbBestBlock> for PostgresActor<Block> {
     async fn handle(
         &mut self,
-        _: BestBlock,
+        _: DbBestBlock,
         _: &mut Context<Self>,
-    ) -> <BestBlock as Message>::Result {
-        match self.db.max_block_num().await {
+    ) -> <DbBestBlock as Message>::Result {
+        match self.db.best_block_num().await {
             Ok(num) => num,
             Err(err) => {
                 log::error!(target: "actor", "{}", err);
@@ -183,13 +183,13 @@ impl<Block: BlockT> Handler<BestBlock> for PostgresActor<Block> {
 }
 
 #[async_trait::async_trait]
-impl<Block: BlockT> Handler<FinalizedBlock> for PostgresActor<Block> {
+impl<Block: BlockT> Handler<DbFinalizedBlock> for PostgresActor<Block> {
     async fn handle(
         &mut self,
-        _: FinalizedBlock,
+        _: DbFinalizedBlock,
         _: &mut Context<Self>,
-    ) -> <FinalizedBlock as Message>::Result {
-        match self.db.max_block_num().await {
+    ) -> <DbFinalizedBlock as Message>::Result {
+        match self.db.finalized_block_num().await {
             Ok(num) => num,
             Err(err) => {
                 log::error!(target: "actor", "{}", err);

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, marker::PhantomData};
 
 use codec::Encode;
 use sp_runtime::{
@@ -8,6 +8,12 @@ use sp_runtime::{
 };
 use sp_state_machine::{ChildStorageCollection, StorageCollection};
 use sp_storage::{well_known_keys, StorageData, StorageKey};
+
+use crate::error::ActorError;
+
+// ============================================================================
+// `Data` Actor Message
+// ============================================================================
 
 #[derive(Clone, Debug)]
 pub struct MetadataMessage<Block: BlockT> {
@@ -257,49 +263,78 @@ impl<Block: BlockT> From<FinalizedBlockMessage<Block>>
     }
 }
 
+// ============================================================================
+// `Communication` Actor Message
+// ============================================================================
+
 #[derive(Copy, Clone, Debug)]
-pub struct CheckIfMetadataExist {
+pub struct DbIfMetadataExist {
     pub spec_version: u32,
 }
 
-impl xtra::Message for CheckIfMetadataExist {
+impl xtra::Message for DbIfMetadataExist {
     type Result = bool;
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct MaxBlock;
-impl xtra::Message for MaxBlock {
+pub struct DbMaxBlock;
+impl xtra::Message for DbMaxBlock {
     type Result = Option<u32>;
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct BestBlock;
-impl xtra::Message for BestBlock {
+pub struct DbBestBlock;
+impl xtra::Message for DbBestBlock {
     type Result = Option<u32>;
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct FinalizedBlock;
-impl xtra::Message for FinalizedBlock {
+pub struct DbFinalizedBlock;
+impl xtra::Message for DbFinalizedBlock {
     type Result = Option<u32>;
-}
-
-#[derive(Copy, Clone, Debug)]
-pub struct ReIndex;
-impl xtra::Message for ReIndex {
-    type Result = ();
-}
-
-#[derive(Copy, Clone, Debug)]
-pub struct Crawl;
-impl xtra::Message for Crawl {
-    type Result = ();
 }
 
 #[derive(Copy, Clone, Debug)]
 pub struct BestAndFinalized;
 impl xtra::Message for BestAndFinalized {
+    type Result = (u32, u32);
+}
+
+// ============================================================================
+// `Command` Actor Message
+// ============================================================================
+
+#[derive(Copy, Clone, Debug)]
+pub struct Initialize;
+impl xtra::Message for Initialize {
     type Result = ();
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct Tick;
+impl xtra::Message for Tick {
+    type Result = Result<(), ActorError>;
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct CrawlBestAndFinalized;
+impl xtra::Message for CrawlBestAndFinalized {
+    type Result = ();
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct CrawlBlock<Block: BlockT>(u32, PhantomData<Block>);
+impl<Block: BlockT> CrawlBlock<Block> {
+    pub fn new(block: u32) -> Self {
+        Self(block, PhantomData)
+    }
+
+    pub fn block_num(&self) -> u32 {
+        self.0
+    }
+}
+impl<Block: BlockT> xtra::Message for CrawlBlock<Block> {
+    type Result = Option<BlockMessage<Block>>;
 }
 
 #[derive(Copy, Clone, Debug)]

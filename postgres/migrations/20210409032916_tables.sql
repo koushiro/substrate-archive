@@ -83,6 +83,15 @@ CREATE TABLE IF NOT EXISTS main_storage_9 PARTITION OF main_storage FOR VALUES F
 -- CREATE TABLE IF NOT EXISTS child_storage_8 PARTITION OF child_storage FOR VALUES FROM (8000000) TO (9000000);
 -- CREATE TABLE IF NOT EXISTS child_storage_9 PARTITION OF child_storage FOR VALUES FROM (9000000) TO (10000000);
 
+CREATE TABLE IF NOT EXISTS best_block (
+    only_one boolean PRIMARY KEY DEFAULT TRUE,
+
+    block_num integer CHECK (block_num >= 0) NOT NULL,
+    block_hash bytea NOT NULL,
+
+    CONSTRAINT only_one_row CHECK (only_one)
+);
+
 CREATE TABLE IF NOT EXISTS finalized_block (
     only_one boolean PRIMARY KEY DEFAULT TRUE,
 

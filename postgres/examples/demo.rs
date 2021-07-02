@@ -26,7 +26,7 @@ async fn main() -> Result<(), SqlxError> {
     };
     let _ = db.insert(metadata).await?;
 
-    let does_exist = db.check_if_metadata_exists(0).await?;
+    let does_exist = db.if_metadata_exists(0).await?;
     log::info!("Metadata {} exists: {}", 0, does_exist);
 
     let best_block = db.best_block_num().await?;

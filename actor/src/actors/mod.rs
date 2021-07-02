@@ -1,7 +1,7 @@
-mod block;
-mod dispatch;
+mod dispatcher;
 mod metadata;
 mod postgres;
+mod scheduler;
 
 use std::sync::Arc;
 
@@ -42,7 +42,7 @@ where
 {
     db: Address<postgres::PostgresActor<Block>>,
     metadata: Address<metadata::MetadataActor<Block>>,
-    block: Address<block::BlockActor<Block, Backend, Api>>,
+    scheduler: Address<scheduler::Scheduler<Block, Backend, Api>>,
 }
 
 impl<Block, Backend, Api> Actors<Block, Backend, Api>
@@ -54,21 +54,6 @@ where
         + MetadataApi<Block>
         + ApiExt<Block, StateBackend = StateBackendFor<Backend, Block>>,
 {
-    fn spawn_dispatcher(
-        config: DispatcherConfig,
-    ) -> Result<dispatch::Dispatcher<Block>, ActorError> {
-        let mut dispatcher = dispatch::Dispatcher::<Block>::new();
-        if let Some(config) = config.kafka {
-            let kafka = dispatch::kafka::KafkaActor::<Block>::new(config)?
-                .create(None)
-                .spawn_global();
-            log::info!(target: "actor", "Spawn Kafka Actor");
-            dispatcher.add("kafka", kafka);
-            log::info!(target: "actor", "Add Kafka Actor into dispatcher");
-        }
-        Ok(dispatcher)
-    }
-
     pub async fn spawn(
         backend: Arc<Backend>,
         api: Arc<Api>,
@@ -86,37 +71,55 @@ where
             .spawn_global();
         log::info!(target: "actor", "Spawn Metadata Actor");
 
-        let block = block::BlockActor::<Block, Backend, Api>::new(
+        let scheduler = scheduler::Scheduler::<Block, Backend, Api>::new(
+            config.genesis,
             backend,
             api,
-            metadata.clone(),
             db.clone(),
-            config.genesis,
+            metadata.clone(),
         )
         .create(None)
         .spawn_global();
-        log::info!(target: "actor", "Spawn Block Actor");
+        log::info!(target: "actor", "Spawn Scheduler Actor");
 
         Ok(Self {
             db,
             metadata,
-            block,
+            scheduler,
         })
+    }
+
+    fn spawn_dispatcher(
+        config: DispatcherConfig,
+    ) -> Result<dispatcher::Dispatcher<Block>, ActorError> {
+        let mut dispatcher = dispatcher::Dispatcher::<Block>::new();
+        if let Some(config) = config.kafka {
+            let kafka = dispatcher::kafka::KafkaActor::<Block>::new(config)?
+                .create(None)
+                .spawn_global();
+            log::info!(target: "actor", "Spawn Kafka Actor");
+            dispatcher.add("kafka", kafka);
+            log::info!(target: "actor", "Add Kafka Actor into dispatcher");
+        }
+        Ok(dispatcher)
     }
 
     pub async fn tick_interval(&self) -> Result<(), ActorError> {
         // messages that only need to be sent once
-        self.block.send(ReIndex).await?;
-        let block = self.block.clone();
+        self.scheduler.send(Initialize).await?;
+        let scheduler = self.scheduler.clone();
         tokio::task::spawn(async move {
             loop {
-                let fut = (
-                    Box::pin(block.send(Crawl)),
-                    Box::pin(block.send(BestAndFinalized)),
-                );
-                if let (Err(_), Err(_)) = futures::future::join(fut.0, fut.1).await {
-                    log::error!(target: "actor", "Block actor error");
-                    break;
+                match scheduler.send(Tick).await {
+                    Ok(Ok(_)) => {}
+                    Ok(Err(err)) => {
+                        log::error!(target: "actor", "Scheduler tick error: {}", err);
+                        break;
+                    }
+                    Err(_) => {
+                        log::error!(target: "actor", "Scheduler Actor Disconnected");
+                        break;
+                    }
                 }
             }
         });
@@ -124,9 +127,12 @@ where
     }
 
     pub async fn kill(self) -> Result<(), ActorError> {
-        self.block.send(Die).await?;
+        self.scheduler.send(Die).await?;
+        log::info!(target: "actor", "Stopped Scheduler Actor");
         self.metadata.send(Die).await?;
+        log::info!(target: "actor", "Stopped Metadata Actor");
         self.db.send(Die).await?;
+        log::info!(target: "actor", "Stopped Postgres Actor");
         Ok(())
     }
 }

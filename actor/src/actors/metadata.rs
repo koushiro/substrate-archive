@@ -9,7 +9,7 @@ use sp_runtime::traits::{Block as BlockT, Header as HeaderT};
 use crate::{
     actors::postgres::PostgresActor,
     error::ActorError,
-    message::{BlockMessage, CheckIfMetadataExist, Die, MetadataMessage},
+    message::{BlockMessage, DbIfMetadataExist, Die, MetadataMessage},
 };
 
 pub trait GetMetadata<Block: BlockT>: Send + Sync {
@@ -45,7 +45,7 @@ impl<Block: BlockT> MetadataActor<Block> {
         block_num: <Block::Header as HeaderT>::Number,
         block_hash: Block::Hash,
     ) -> Result<(), ActorError> {
-        let is_exist = self.db.send(CheckIfMetadataExist { spec_version }).await?;
+        let is_exist = self.db.send(DbIfMetadataExist { spec_version }).await?;
         if !is_exist {
             log::info!(
                 target: "actor",
