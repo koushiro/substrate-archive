@@ -6,7 +6,7 @@
 console = { level = "DEBUG" }
 ## Optional log level of file, default: "DEBUG"
 ## Optional log file path, default: "./archive.log"
-file = { level = "DEBUG", path = "./polkadot-archive.log" }
+#file = { level = "DEBUG", path = "./polkadot-archive.log" }
 
 ################################
 # Archive client configuration #
@@ -21,9 +21,9 @@ cache_size = 128
 secondary_db_path = "./rocksdb_secondary"
 
 [client.executor]
-wasm_exec_method = "Interpreted" # or "Compiled"
-default_heap_pages = 1024
-max_runtime_instances = 8
+wasm_exec_method = "Compiled" # or "Interpreted"
+default_heap_pages = 4096
+max_runtime_instances = 32
 
 ##################################
 # Archive control configuration #
