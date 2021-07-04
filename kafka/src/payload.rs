@@ -55,6 +55,7 @@ pub struct BestBlockPayload<Block: BlockT> {
 pub struct FinalizedBlockPayload<Block: BlockT> {
     pub block_num: <Block::Header as HeaderT>::Number,
     pub block_hash: <Block::Header as HeaderT>::Hash,
+    pub timestamp: i64,
 }
 
 // only for example `demo`
@@ -94,4 +95,5 @@ pub struct BestBlockPayloadDemo {
 pub struct FinalizedBlockPayloadDemo {
     pub block_num: u32,
     pub block_hash: String,
+    pub timestamp: i64,
 }

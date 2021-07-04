@@ -1,7 +1,8 @@
+use std::collections::HashMap;
+
 use archive_kafka::{
     payload::*, KafkaConfig, KafkaError, KafkaProducer, KafkaTopicConfig, StorageData, StorageKey,
 };
-use std::collections::HashMap;
 
 #[tokio::main]
 async fn main() -> Result<(), KafkaError> {
@@ -64,6 +65,7 @@ async fn main() -> Result<(), KafkaError> {
         let finalized_block = FinalizedBlockPayloadDemo {
             block_num: i,
             block_hash: "0x00".into(),
+            timestamp: chrono::Utc::now().timestamp_millis(),
         };
         producer.send(finalized_block).await?;
     }

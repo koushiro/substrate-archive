@@ -1,5 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
+use chrono::Utc;
 use xtra::prelude::*;
 
 use sc_client_api::backend;
@@ -77,6 +78,7 @@ where
                 .send(FinalizedBlockMessage {
                     block_num: finalized_number,
                     block_hash: finalized_hash,
+                    timestamp: Utc::now().timestamp_millis(),
                 })
                 .await?;
             self.finalized_block = finalized_number.saturated_into::<u32>();

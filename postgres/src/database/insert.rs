@@ -89,6 +89,68 @@ impl InsertModel for BlockModel {
 }
 
 #[async_trait::async_trait]
+impl InsertModel for Vec<BlockModel> {
+    async fn insert(self, conn: &mut PoolConnection<Postgres>) -> Result<u64, SqlxError> {
+        log::debug!(
+            target: "postgres",
+            "Insert bulk block into postgres, height = [{:?}~{:?}]",
+            self.first().map(|block| block.block_num),
+            self.last().map(|block| block.block_num)
+        );
+
+        let mut batch = Batch::new(
+            "block",
+            "INSERT INTO block VALUES",
+            r#"
+            ON CONFLICT (block_num) DO UPDATE SET
+                spec_version = EXCLUDED.spec_version,
+                block_num = EXCLUDED.block_num,
+                block_hash = EXCLUDED.block_hash,
+                parent_hash = EXCLUDED.parent_hash,
+                state_root = EXCLUDED.state_root,
+                extrinsics_root = EXCLUDED.extrinsics_root,
+                digest = EXCLUDED.digest,
+                extrinsics = EXCLUDED.extrinsics,
+                justifications = EXCLUDED.justifications
+            "#,
+        );
+        for model in self {
+            batch.reserve(9)?;
+            if batch.current_num_arguments() > 0 {
+                batch.append(",");
+            }
+            batch.append("(");
+            batch.bind(model.spec_version)?;
+            batch.append(",");
+            batch.bind(model.block_num)?;
+            batch.append(",");
+            batch.bind(model.block_hash)?;
+            batch.append(",");
+            batch.bind(model.parent_hash)?;
+            batch.append(",");
+            batch.bind(model.state_root)?;
+            batch.append(",");
+            batch.bind(model.extrinsics_root)?;
+            batch.append(",");
+            batch.bind(model.digest)?;
+            batch.append(",");
+            batch.bind(model.extrinsics)?;
+            batch.append(",");
+            batch.bind(model.justifications)?;
+            batch.append(")");
+        }
+        let rows_affected = batch.execute(conn).await?;
+
+        log::debug!(
+            target: "postgres",
+            "Insert bulk block into postgres, affected rows = {}",
+            rows_affected
+        );
+        Ok(rows_affected)
+    }
+}
+
+#[async_trait::async_trait]
 impl InsertModel for MainStorageChangeModel {
     async fn insert(self, conn: &mut PoolConnection<Postgres>) -> Result<u64, SqlxError> {
         log::debug!(
@@ -134,8 +196,9 @@ impl InsertModel for Vec<MainStorageChangeModel> {
 
         log::debug!(
             target: "postgres",
-            "Insert bulk main storage into postgres, height = {}",
-            self[0].block_num
+            "Insert bulk main storage into postgres, height = [{:?} ~ {:?}]",
+            self.first().map(|storage| storage.block_num),
+            self.last().map(|storage| storage.block_num)
         );
 
         /*

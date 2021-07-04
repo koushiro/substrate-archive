@@ -191,8 +191,10 @@ dependencies = [
  "archive-kafka",
  "archive-postgres",
  "async-trait",
+ "chrono",
  "futures 0.3.15",
  "hex",
+ "itertools 0.10.1",
  "log",
  "parity-scale-codec",
  "sc-client-api",
@@ -251,6 +253,7 @@ name = "archive-kafka"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "chrono",
  "env_logger 0.8.4",
  "hex",
  "log",

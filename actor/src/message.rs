@@ -74,6 +74,35 @@ fn is_well_known_key(key: &[u8]) -> bool {
     )
 }
 
+fn into_block_model<Block: BlockT>(
+    spec_version: u32,
+    block_num: u32,
+    block_hash: Vec<u8>,
+    block: SignedBlock<Block>,
+) -> archive_postgres::BlockModel {
+    archive_postgres::BlockModel {
+        spec_version,
+        block_num,
+        block_hash: block_hash.clone(),
+        parent_hash: block.block.header().parent_hash().as_ref().to_vec(),
+        state_root: block.block.header().state_root().as_ref().to_vec(),
+        extrinsics_root: block.block.header().extrinsics_root().as_ref().to_vec(),
+        digest: block.block.header().digest().encode(),
+        extrinsics: block
+            .block
+            .extrinsics()
+            .iter()
+            .map(|ext| ext.encode())
+            .collect(),
+        justifications: block.justifications.map(|justifications| {
+            justifications
+                .into_iter()
+                .map(|justification| justification.encode())
+                .collect()
+        }),
+    }
+}
+
 fn into_main_storage_models(
     block_num: u32,
     block_hash: Vec<u8>,
@@ -138,34 +167,12 @@ impl<Block: BlockT> From<BlockMessage<Block>>
         let block_num = (*block.inner.block.header().number()).saturated_into();
         let block_hash = block.inner.block.header().hash().as_ref().to_vec();
         (
-            archive_postgres::BlockModel {
-                spec_version: block.spec_version,
+            into_block_model(
+                block.spec_version,
                 block_num,
-                block_hash: block_hash.clone(),
-                parent_hash: block.inner.block.header().parent_hash().as_ref().to_vec(),
-                state_root: block.inner.block.header().state_root().as_ref().to_vec(),
-                extrinsics_root: block
-                    .inner
-                    .block
-                    .header()
-                    .extrinsics_root()
-                    .as_ref()
-                    .to_vec(),
-                digest: block.inner.block.header().digest().encode(),
-                extrinsics: block
-                    .inner
-                    .block
-                    .extrinsics()
-                    .iter()
-                    .map(|ext| ext.encode())
-                    .collect(),
-                justifications: block.inner.justifications.map(|justifications| {
-                    justifications
-                        .into_iter()
-                        .map(|justification| justification.encode())
-                        .collect()
-                }),
-            },
+                block_hash.clone(),
+                block.inner,
+            ),
             into_main_storage_models(block_num, block_hash.clone(), block.main_changes),
             into_child_storage_models(block_num, block_hash, block.child_changes),
         )
@@ -206,6 +213,64 @@ impl<Block: BlockT> From<BlockMessage<Block>> for archive_kafka::BlockPayload<Bl
 }
 
 #[derive(Clone, Debug)]
+pub struct BatchBlockMessage<Block: BlockT> {
+    pub inner: Vec<BlockMessage<Block>>,
+}
+
+impl<Block: BlockT> BatchBlockMessage<Block> {
+    pub fn new(blocks: Vec<BlockMessage<Block>>) -> Self {
+        Self { inner: blocks }
+    }
+
+    pub fn inner(&self) -> &[BlockMessage<Block>] {
+        &self.inner
+    }
+
+    pub fn into_inner(self) -> Vec<BlockMessage<Block>> {
+        self.inner
+    }
+}
+
+impl<Block: BlockT> xtra::Message for BatchBlockMessage<Block> {
+    type Result = ();
+}
+
+impl<Block: BlockT> From<BatchBlockMessage<Block>>
+    for (
+        Vec<archive_postgres::BlockModel>,
+        Vec<archive_postgres::MainStorageChangeModel>,
+        Vec<archive_postgres::ChildStorageChangeModel>,
+    )
+{
+    fn from(message: BatchBlockMessage<Block>) -> Self {
+        let mut blocks = Vec::with_capacity(message.inner().len());
+        let mut main_storages = Vec::with_capacity(message.inner().len());
+        let mut child_storages = Vec::with_capacity(message.inner().len());
+        for block in message.into_inner() {
+            let block_num = (*block.inner.block.header().number()).saturated_into();
+            let block_hash = block.inner.block.header().hash().as_ref().to_vec();
+            blocks.push(into_block_model(
+                block.spec_version,
+                block_num,
+                block_hash.clone(),
+                block.inner,
+            ));
+            main_storages.extend(into_main_storage_models(
+                block_num,
+                block_hash.clone(),
+                block.main_changes,
+            ));
+            child_storages.extend(into_child_storage_models(
+                block_num,
+                block_hash,
+                block.child_changes,
+            ));
+        }
+        (blocks, main_storages, child_storages)
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct BestBlockMessage<Block: BlockT> {
     pub block_num: <Block::Header as HeaderT>::Number,
     pub block_hash: Block::Hash,
@@ -237,6 +302,7 @@ impl<Block: BlockT> From<BestBlockMessage<Block>> for archive_kafka::BestBlockPa
 pub struct FinalizedBlockMessage<Block: BlockT> {
     pub block_num: <Block::Header as HeaderT>::Number,
     pub block_hash: Block::Hash,
+    pub timestamp: i64,
 }
 
 impl<Block: BlockT> xtra::Message for FinalizedBlockMessage<Block> {
@@ -259,6 +325,7 @@ impl<Block: BlockT> From<FinalizedBlockMessage<Block>>
         Self {
             block_num: finalized_block.block_num,
             block_hash: finalized_block.block_hash,
+            timestamp: finalized_block.timestamp,
         }
     }
 }

@@ -6,12 +6,15 @@ use xtra::{prelude::*, Disconnected};
 
 use sp_runtime::traits::{Block as BlockT, Header as HeaderT};
 
-use crate::message::{BestBlockMessage, BlockMessage, Die, FinalizedBlockMessage, MetadataMessage};
+use crate::message::{
+    BatchBlockMessage, BestBlockMessage, BlockMessage, Die, FinalizedBlockMessage, MetadataMessage,
+};
 
 pub trait DispatchActor<Block: BlockT>:
     Actor
     + Handler<MetadataMessage<Block>>
     + Handler<BlockMessage<Block>>
+    + Handler<BatchBlockMessage<Block>>
     + Handler<BestBlockMessage<Block>>
     + Handler<FinalizedBlockMessage<Block>>
     + Handler<Die>
@@ -24,6 +27,7 @@ where
     T: Actor
         + Handler<MetadataMessage<Block>>
         + Handler<BlockMessage<Block>>
+        + Handler<BatchBlockMessage<Block>>
         + Handler<BestBlockMessage<Block>>
         + Handler<FinalizedBlockMessage<Block>>
         + Handler<Die>,
@@ -35,6 +39,7 @@ type MessageChannelMap<M> = HashMap<&'static str, Box<dyn StrongMessageChannel<M
 pub struct Dispatcher<Block: BlockT> {
     metadata: MessageChannelMap<MetadataMessage<Block>>,
     block: MessageChannelMap<BlockMessage<Block>>,
+    blocks: MessageChannelMap<BatchBlockMessage<Block>>,
     best_block: MessageChannelMap<BestBlockMessage<Block>>,
     finalized_block: MessageChannelMap<FinalizedBlockMessage<Block>>,
     die: MessageChannelMap<Die>,
@@ -45,6 +50,7 @@ impl<Block: BlockT> Dispatcher<Block> {
         Self {
             metadata: HashMap::new(),
             block: HashMap::new(),
+            blocks: HashMap::new(),
             best_block: HashMap::new(),
             finalized_block: HashMap::new(),
             die: HashMap::new(),
@@ -58,6 +64,7 @@ impl<Block: BlockT> Dispatcher<Block> {
     ) -> &mut Self {
         self.metadata.insert(name, Box::new(addr.clone()));
         self.block.insert(name, Box::new(addr.clone()));
+        self.blocks.insert(name, Box::new(addr.clone()));
         self.best_block.insert(name, Box::new(addr.clone()));
         self.finalized_block.insert(name, Box::new(addr.clone()));
         self.die.insert(name, Box::new(addr));
@@ -87,6 +94,23 @@ impl<Block: BlockT> Dispatcher<Block> {
                 "Dispatch `Block` message into `{}`, height = {}",
                 name,
                 message.inner.block.header().number()
+            );
+            dispatcher.send(message.clone()).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn dispatch_batch_block(
+        &self,
+        message: BatchBlockMessage<Block>,
+    ) -> Result<(), Disconnected> {
+        for (name, dispatcher) in &self.blocks {
+            log::debug!(
+                target: "actor",
+                "Dispatch `BatchBlock` message into `{}`, height = [{:?}~{:?}]",
+                name,
+                message.inner().first().map(|block| block.inner.block.header().number()),
+                message.inner().last().map(|block| block.inner.block.header().number())
             );
             dispatcher.send(message.clone()).await?;
         }

@@ -1,7 +1,7 @@
 mod best_finalized;
 mod block;
 
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use xtra::{prelude::*, spawn::TokioGlobalSpawnExt};
 
@@ -35,11 +35,12 @@ where
     metadata: Address<MetadataActor<Block>>,
 
     best_and_finalized: Address<BestAndFinalizedActor<Block, Backend>>,
-    block: Address<BlockActor<Block, Backend, Api>>,
+    blocks: Vec<Address<BlockActor<Block, Backend, Api>>>,
 
     curr_block: u32,
-    best_block: u32,
-    finalized_block: u32,
+
+    max_block_load: u32,
+    interval_ms: u64,
 }
 
 impl<Block, Backend, Api> Scheduler<Block, Backend, Api>
@@ -56,17 +57,25 @@ where
         api: Arc<Api>,
         db: Address<PostgresActor<Block>>,
         metadata: Address<MetadataActor<Block>>,
+        max_block_load: u32,
+        interval_ms: u64,
     ) -> Self {
         let best_and_finalized =
-            BestAndFinalizedActor::<Block, Backend>::new(backend.clone(), db.clone(), 1000)
+            BestAndFinalizedActor::<Block, Backend>::new(backend.clone(), db.clone(), interval_ms)
                 .create(None)
                 .spawn_global();
         log::info!(target: "actor", "Spawn BestAndFinalized Actor");
 
-        let block = BlockActor::<Block, Backend, Api>::new(backend.clone(), api.clone())
-            .create(None)
-            .spawn_global();
-        log::info!(target: "actor", "Spawn Block Actor");
+        let mut blocks = Vec::with_capacity(max_block_load as usize);
+        assert!(max_block_load >= 1, "max_block_load must be >= 1");
+        for i in 0..max_block_load {
+            blocks.push(
+                BlockActor::<Block, Backend, Api>::new(backend.clone(), api.clone())
+                    .create(None)
+                    .spawn_global(),
+            );
+            log::info!(target: "actor", "Spawn Block[{}] Actor", i);
+        }
 
         Self {
             genesis,
@@ -75,21 +84,17 @@ where
             db,
             metadata,
             best_and_finalized,
-            block,
+            blocks,
             curr_block: 0,
-            best_block: 0,
-            finalized_block: 0,
+            max_block_load,
+            interval_ms,
         }
     }
 
     async fn initialize(&mut self) -> Result<(), ActorError> {
-        // https://github.com/rust-lang/rust/issues/71126
-        let (best_block, finalized_block) = self.best_and_finalized().await?;
-        self.best_block = best_block;
-        self.finalized_block = finalized_block;
-
+        let (_best_block, finalized_block) = self.best_and_finalized().await?;
         if let Some(max) = self.db.send(DbMaxBlock).await? {
-            self.curr_block = std::cmp::min(max, self.finalized_block);
+            self.curr_block = std::cmp::min(max, finalized_block);
             // TODO: remove the blocks and storages (Block finalized_block ~ Block max) from db if max > finalized_block
             log::info!(target: "actor", "Initialize from the Block #{}", self.curr_block);
         } else {
@@ -138,10 +143,48 @@ where
     }
 
     async fn tick(&mut self) -> Result<(), ActorError> {
-        self.curr_block += 1;
-        if let Some(block) = self.block.send(CrawlBlock::new(self.curr_block)).await? {
-            self.metadata.send(block).await?;
+        let (_best_block, finalized_block) = self.best_and_finalized().await?;
+        if self.curr_block + self.max_block_load <= finalized_block {
+            // Haven't caught up with the latest finalized block
+            self.tick_batch().await
+        } else {
+            // It's about to catch up with the latest finalized block
+            self.tick_one().await
         }
+    }
+
+    async fn tick_one(&mut self) -> Result<(), ActorError> {
+        let next_block = self.curr_block + 1;
+        let block = self.blocks.first().expect("At least one block actor");
+        log::debug!(target: "actor", "Block[0] Actor Crawling Block #{}", next_block);
+        // TODO: check the forked block
+        if let Some(block) = block.send(CrawlBlock::new(next_block)).await? {
+            self.metadata.send(block).await?;
+            self.curr_block = next_block;
+        } else {
+            tokio::time::sleep(Duration::from_millis(self.interval_ms)).await;
+        }
+        Ok(())
+    }
+
+    async fn tick_batch(&mut self) -> Result<(), ActorError> {
+        // example:
+        // curr_block = 0; max_block_load = 10  => (0+1..0+10] => (1..10]
+        // curr_block = 10; max_block_load = 10 => (10+1..10+10] => (11..20]
+        let fut = ((self.curr_block + 1)..=(self.curr_block + self.max_block_load))
+            .map(|i| {
+                let index = (i % self.max_block_load) as usize;
+                log::debug!(target: "actor", "Block[{}] Actor Crawling Block #{}", index, i);
+                self.blocks[index].send(CrawlBlock::new(i))
+            })
+            .collect::<Vec<_>>();
+        let results = futures::future::join_all(fut).await;
+        let results = results
+            .into_iter()
+            .map(|result| result.unwrap().unwrap()) // shouldn't be none or error
+            .collect::<Vec<_>>();
+        self.metadata.send(BatchBlockMessage::new(results)).await?;
+        self.curr_block += self.max_block_load;
         Ok(())
     }
 }
@@ -202,10 +245,12 @@ where
 {
     async fn handle(&mut self, _: Die, ctx: &mut Context<Self>) -> <Die as Message>::Result {
         log::info!(target: "actor", "Stopping Scheduler Actor");
-        if let Err(_) = self.block.send(Die).await {
-            log::error!(target: "actor", "Stop Block Actor But Disconnected");
+        for (index, block) in self.blocks.iter().enumerate() {
+            if let Err(_) = block.send(Die).await {
+                log::error!(target: "actor", "Stop Block[{}] Actor But Disconnected", index);
+            }
+            log::info!(target: "actor", "Stopped Block[{}] Actor", index);
         }
-        log::info!(target: "actor", "Stopped Block Actor");
         if let Err(_) = self.best_and_finalized.send(Die).await {
             log::error!(target: "actor", "Stop BestAndFinalized Actor But Disconnected");
         }

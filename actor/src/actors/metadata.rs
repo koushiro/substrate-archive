@@ -1,6 +1,7 @@
-use xtra::prelude::*;
-
 use std::sync::Arc;
+
+use itertools::Itertools;
+use xtra::prelude::*;
 
 use sp_api::{ApiError, BlockId, Metadata as MetadataApi, ProvideRuntimeApi};
 use sp_core::OpaqueMetadata;
@@ -9,7 +10,7 @@ use sp_runtime::traits::{Block as BlockT, Header as HeaderT};
 use crate::{
     actors::postgres::PostgresActor,
     error::ActorError,
-    message::{BlockMessage, DbIfMetadataExist, Die, MetadataMessage},
+    message::{BatchBlockMessage, BlockMessage, DbIfMetadataExist, Die, MetadataMessage},
 };
 
 pub trait GetMetadata<Block: BlockT>: Send + Sync {
@@ -78,6 +79,26 @@ impl<Block: BlockT> MetadataActor<Block> {
         self.db.send(message).await?;
         Ok(())
     }
+
+    async fn batch_block_handler(
+        &self,
+        message: BatchBlockMessage<Block>,
+    ) -> Result<(), ActorError> {
+        for block in message
+            .inner()
+            .iter()
+            .unique_by(|&block| block.spec_version)
+        {
+            self.meta_checker(
+                block.spec_version,
+                *block.inner.block.header().number(),
+                block.inner.block.hash(),
+            )
+            .await?;
+        }
+        self.db.send(message).await?;
+        Ok(())
+    }
 }
 
 #[async_trait::async_trait]
@@ -91,6 +112,19 @@ impl<Block: BlockT> Handler<BlockMessage<Block>> for MetadataActor<Block> {
         _: &mut Context<Self>,
     ) -> <BlockMessage<Block> as Message>::Result {
         if let Err(err) = self.block_handler(message).await {
+            log::error!(target: "actor", "{}", err);
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl<Block: BlockT> Handler<BatchBlockMessage<Block>> for MetadataActor<Block> {
+    async fn handle(
+        &mut self,
+        message: BatchBlockMessage<Block>,
+        _: &mut Context<Self>,
+    ) -> <BatchBlockMessage<Block> as Message>::Result {
+        if let Err(err) = self.batch_block_handler(message).await {
             log::error!(target: "actor", "{}", err);
         }
     }

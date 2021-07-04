@@ -163,6 +163,8 @@ where
                 dispatcher: DispatcherConfig {
                     kafka: self.config.kafka,
                 },
+                max_block_load: self.config.control.max_block_load,
+                interval_ms: self.config.control.interval_ms,
             },
         )?;
         Ok(system)

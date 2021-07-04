@@ -77,6 +77,8 @@ where
             api,
             db.clone(),
             metadata.clone(),
+            config.max_block_load,
+            config.interval_ms,
         )
         .create(None)
         .spawn_global();

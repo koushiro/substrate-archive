@@ -1,4 +1,4 @@
-use std::{mem, time::Duration};
+use std::{collections::HashSet, mem, time::Duration};
 
 use xtra::prelude::*;
 
@@ -10,8 +10,8 @@ use crate::{
     actors::dispatcher::Dispatcher,
     error::ActorError,
     message::{
-        BestBlockMessage, BlockMessage, DbBestBlock, DbFinalizedBlock, DbIfMetadataExist,
-        DbMaxBlock, Die, FinalizedBlockMessage, MetadataMessage,
+        BatchBlockMessage, BestBlockMessage, BlockMessage, DbBestBlock, DbFinalizedBlock,
+        DbIfMetadataExist, DbMaxBlock, Die, FinalizedBlockMessage, MetadataMessage,
     },
 };
 
@@ -43,6 +43,7 @@ impl<Block: BlockT> PostgresActor<Block> {
             tokio::time::sleep(Duration::from_millis(20)).await;
         }
         mem::drop(conn);
+
         let (block, main_storage, _child_storage): (
             BlockModel,
             Vec<MainStorageChangeModel>,
@@ -53,6 +54,40 @@ impl<Block: BlockT> PostgresActor<Block> {
         // TODO: insert child storage into database.
         // self.db.insert(_child_storage).await?;
         self.dispatcher.dispatch_block(message).await?;
+        Ok(())
+    }
+
+    // Returns true if all metadata versions are in database
+    // Otherwise, returns false if some metadata versions are missing.
+    fn db_contains_metadata(blocks: &[BlockMessage<Block>], all_versions: &HashSet<u32>) -> bool {
+        let versions: HashSet<u32> = blocks.iter().map(|block| block.spec_version).collect();
+        versions.is_subset(all_versions)
+    }
+
+    async fn batch_block_handler(
+        &self,
+        message: BatchBlockMessage<Block>,
+    ) -> Result<(), ActorError> {
+        let mut conn = self.db.conn().await?;
+        let all_versions: HashSet<u32> = query::get_all_metadata_versions(&mut conn)
+            .await?
+            .into_iter()
+            .collect();
+        while !Self::db_contains_metadata(message.inner(), &all_versions) {
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        mem::drop(conn);
+
+        let (blocks, main_storages, _child_storages): (
+            Vec<BlockModel>,
+            Vec<MainStorageChangeModel>,
+            Vec<ChildStorageChangeModel>,
+        ) = message.clone().into();
+        self.db.insert(blocks).await?;
+        self.db.insert(main_storages).await?;
+        // TODO: insert child storage into database.
+        // self.db.insert(_child_storages).await?;
+        self.dispatcher.dispatch_batch_block(message).await?;
         Ok(())
     }
 
@@ -100,6 +135,19 @@ impl<Block: BlockT> Handler<BlockMessage<Block>> for PostgresActor<Block> {
         _ctx: &mut Context<Self>,
     ) -> <BlockMessage<Block> as Message>::Result {
         if let Err(err) = self.block_handler(message).await {
+            log::error!(target: "actor", "{}", err);
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl<Block: BlockT> Handler<BatchBlockMessage<Block>> for PostgresActor<Block> {
+    async fn handle(
+        &mut self,
+        message: BatchBlockMessage<Block>,
+        _ctx: &mut Context<Self>,
+    ) -> <BatchBlockMessage<Block> as Message>::Result {
+        if let Err(err) = self.batch_block_handler(message).await {
             log::error!(target: "actor", "{}", err);
         }
     }

@@ -9,11 +9,18 @@ use archive_client::ClientConfig;
 use crate::{error::ArchiveError, logger::LoggerConfig};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ControlConfig {
+    pub(crate) max_block_load: u32,
+    pub(crate) interval_ms: u64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ArchiveConfig {
     pub(crate) logger: LoggerConfig,
     pub(crate) client: ClientConfig,
     pub(crate) postgres: PostgresConfig,
     pub(crate) kafka: Option<KafkaConfig>,
+    pub(crate) control: ControlConfig,
 }
 
 #[derive(Clone, Debug, StructOpt)]

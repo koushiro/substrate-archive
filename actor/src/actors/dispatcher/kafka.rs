@@ -4,7 +4,9 @@ use sp_runtime::traits::Block as BlockT;
 
 use archive_kafka::{payload::*, KafkaConfig, KafkaError, KafkaProducer};
 
-use crate::message::{BestBlockMessage, BlockMessage, Die, FinalizedBlockMessage, MetadataMessage};
+use crate::message::{
+    BatchBlockMessage, BestBlockMessage, BlockMessage, Die, FinalizedBlockMessage, MetadataMessage,
+};
 
 pub struct KafkaActor<Block: BlockT> {
     producer: KafkaProducer,
@@ -48,6 +50,22 @@ impl<Block: BlockT> Handler<BlockMessage<Block>> for KafkaActor<Block> {
         let payload = BlockPayload::from(message);
         if let Err(err) = self.producer.send(payload).await {
             log::error!(target: "actor", "{}", err);
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl<Block: BlockT> Handler<BatchBlockMessage<Block>> for KafkaActor<Block> {
+    async fn handle(
+        &mut self,
+        message: BatchBlockMessage<Block>,
+        _: &mut Context<Self>,
+    ) -> <BatchBlockMessage<Block> as Message>::Result {
+        for message in message.into_inner() {
+            let payload = BlockPayload::from(message);
+            if let Err(err) = self.producer.send(payload).await {
+                log::error!(target: "actor", "{}", err);
+            }
         }
     }
 }
