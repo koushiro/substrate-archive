@@ -1,15 +1,14 @@
-use std::{marker::PhantomData, sync::Arc, time::Instant};
+use std::{marker::PhantomData, str::FromStr, sync::Arc, time::Instant};
 
+use sc_chain_spec::ChainSpec;
 use sc_client_api::backend::{Backend, StateBackendFor};
 use sc_executor::NativeExecutionDispatch;
 use sp_api::{ApiExt, BlockId, ConstructRuntimeApi, Core as CoreApi, Metadata as MetadataApi};
 use sp_blockchain::Backend as BlockchainBackend;
-use sp_runtime::{traits::Block as BlockT, BuildStorage};
+use sp_runtime::traits::Block as BlockT;
 
 use archive_actor::{ActorConfig, Actors, DispatcherConfig};
-use archive_client::{
-    new_archive_client, new_secondary_rocksdb_backend, ApiAccess, ArchiveBackend, ArchiveClient,
-};
+use archive_client::{new_backend, new_client, ApiAccess, ArchiveBackend, ArchiveClient};
 use archive_postgres::migrate;
 
 use crate::{cli::ArchiveConfig, error::ArchiveError};
@@ -132,6 +131,7 @@ pub struct ArchiveSystemBuilder<Block, Executor, RA> {
 impl<Block, Executor, RA> ArchiveSystemBuilder<Block, Executor, RA>
 where
     Block: BlockT,
+    Block::Hash: FromStr,
     Executor: NativeExecutionDispatch + 'static,
     RA: ConstructRuntimeApi<Block, ArchiveClient<Block, Executor, RA>> + Send + Sync + 'static,
     <RA as ConstructRuntimeApi<Block, ArchiveClient<Block, Executor, RA>>>::RuntimeApi: CoreApi<Block>
@@ -145,11 +145,17 @@ where
         }
     }
 
-    pub fn build(self, genesis: &dyn BuildStorage) -> Result<impl Archive, ArchiveError> {
-        let backend = new_secondary_rocksdb_backend(self.config.client.rocksdb.clone())?;
+    pub fn build(mut self, chain_spec: &dyn ChainSpec) -> Result<impl Archive, ArchiveError> {
+        let genesis = chain_spec
+            .as_storage_builder()
+            .build_storage()
+            .expect("build genesis storage");
+        self.config.client.set_code_substitutes(chain_spec);
+
+        let backend = new_backend(self.config.client.rocksdb.clone())?;
         let backend = Arc::new(backend);
-        let client =
-            new_archive_client::<Block, Executor, RA>(backend.clone(), self.config.client)?;
+
+        let client = new_client::<Block, Executor, RA>(backend.clone(), self.config.client)?;
         let client = Arc::new(client);
 
         Self::startup_info(&*client)?;
@@ -158,7 +164,7 @@ where
             backend,
             client,
             ActorConfig {
-                genesis: genesis.build_storage().expect("build genesis storage"),
+                genesis,
                 postgres: self.config.postgres,
                 dispatcher: DispatcherConfig {
                     kafka: self.config.kafka,

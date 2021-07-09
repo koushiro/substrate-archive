@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use sc_client_api::execution_extensions::{ExecutionExtensions, ExecutionStrategies};
 use sc_executor::{NativeExecutionDispatch, NativeExecutor};
@@ -11,8 +11,9 @@ use crate::{
     client::Client,
     config::ClientConfig,
     database::{RocksDbConfig, SecondaryRocksDb},
-    error::{BlockchainError, BlockchainResult},
+    error::{unknown_block_err, BlockchainError, BlockchainResult},
 };
+use std::collections::HashMap;
 
 /// Archive client backend type.
 pub type ArchiveBackend<Block> = ReadOnlyBackend<Block>;
@@ -25,25 +26,24 @@ pub type ArchiveCallExecutor<Block, Executor> =
 pub type ArchiveClient<Block, Executor, RA> =
     Client<Block, ArchiveBackend<Block>, ArchiveCallExecutor<Block, Executor>, RA>;
 
-pub fn new_secondary_rocksdb_backend<Block>(
-    rocksdb: RocksDbConfig,
-) -> BlockchainResult<ArchiveBackend<Block>>
+pub fn new_backend<Block>(config: RocksDbConfig) -> BlockchainResult<ArchiveBackend<Block>>
 where
     Block: BlockT,
 {
     let db =
-        SecondaryRocksDb::open(rocksdb).map_err(|err| BlockchainError::Backend(err.to_string()))?;
+        SecondaryRocksDb::open(config).map_err(|err| BlockchainError::Backend(err.to_string()))?;
     let db = Arc::new(db);
     let backend = ReadOnlyBackend::new(db, Default::default())?;
     Ok(backend)
 }
 
-pub fn new_archive_client<Block, Executor, RA>(
+pub fn new_client<Block, Executor, RA>(
     backend: Arc<ArchiveBackend<Block>>,
     config: ClientConfig,
 ) -> BlockchainResult<ArchiveClient<Block, Executor, RA>>
 where
     Block: BlockT,
+    Block::Hash: FromStr,
     Executor: NativeExecutionDispatch + 'static,
 {
     let executor = ArchiveCallExecutor::new(
@@ -58,7 +58,19 @@ where
             offchain_worker_enabled: config.offchain_worker.enabled,
             offchain_indexing_api: config.offchain_worker.indexing_enabled,
             wasm_runtime_overrides: config.wasm_runtime_overrides,
-            wasm_runtime_substitutes: Default::default(),
+            wasm_runtime_substitutes: config
+                .wasm_runtime_substitutes
+                .into_iter()
+                .map(|(hash, code)| {
+                    let hash = hash.parse::<Block::Hash>().map_err(|_| {
+                        unknown_block_err(format!(
+                            "Failed to parse `{}` as block hash for code substitute.",
+                            hash
+                        ))
+                    })?;
+                    Ok((hash, code))
+                })
+                .collect::<BlockchainResult<HashMap<Block::Hash, Vec<u8>>>>()?,
         },
     )?;
 

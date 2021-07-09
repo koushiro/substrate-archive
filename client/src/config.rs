@@ -1,6 +1,8 @@
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
+
+use sc_chain_spec::ChainSpec;
 
 use crate::database::RocksDbConfig;
 
@@ -20,6 +22,21 @@ pub struct ClientConfig {
     /// over on-chain runtimes when the spec version matches. Set to `None` to
     /// disable overrides (default).
     pub wasm_runtime_overrides: Option<PathBuf>,
+    /// Map of WASM runtime substitute starting at the child of the given block until the runtime
+    /// version doesn't match anymore.
+    ///
+    /// NOTE: Not to be confused with 'wasm_runtime_overrides'. code_substitutes
+    /// are included in the chain_spec and primarily for fixing problematic on-chain wasm.
+    /// If both are in use, the `wasm_runtime_overrides` takes precedence.
+    #[serde(skip)]
+    pub(crate) wasm_runtime_substitutes: HashMap<String, Vec<u8>>,
+}
+
+impl ClientConfig {
+    /// Set the code substitutes for a chain.
+    pub fn set_code_substitutes(&mut self, spec: &dyn ChainSpec) {
+        self.wasm_runtime_substitutes = spec.code_substitutes();
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

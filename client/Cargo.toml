@@ -18,6 +18,7 @@ kvdb-rocksdb = "0.11"
 memory-db = "0.26"
 
 # Substrate
+sc-chain-spec = "3.0"
 sc-client-api = "3.0"
 sc-client-db = "0.9"
 sc-executor = { version = "0.9", features = ["wasmtime"] }

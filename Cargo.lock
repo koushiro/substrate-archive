@@ -226,6 +226,7 @@ dependencies = [
  "memory-db",
  "parity-scale-codec",
  "parking_lot 0.11.1",
+ "sc-chain-spec",
  "sc-client-api",
  "sc-client-db",
  "sc-executor",

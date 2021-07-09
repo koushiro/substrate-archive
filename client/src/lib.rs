@@ -8,10 +8,7 @@ mod utils;
 
 pub use self::{
     backend::{BackendConfig, ReadOnlyBackend},
-    builder::{
-        new_archive_client, new_secondary_rocksdb_backend, ArchiveBackend, ArchiveCallExecutor,
-        ArchiveClient,
-    },
+    builder::{new_backend, new_client, ArchiveBackend, ArchiveCallExecutor, ArchiveClient},
     client::Client,
     config::ClientConfig,
     database::{RocksDbConfig, SecondaryRocksDb},

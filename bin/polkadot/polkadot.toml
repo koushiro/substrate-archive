@@ -12,6 +12,8 @@ console = { level = "DEBUG" }
 # Archive client configuration #
 ################################
 [client]
+## Directory where local WASM runtimes live. These runtimes take precedence
+## over on-chain runtimes when the spec version matches. Disable overrides by default.
 #wasm_runtime_overrides = "./wasm_runtime"
 
 ## RocksDB backend configuration for archive client
@@ -69,4 +71,4 @@ finalized_block = "polkadot-finalized-block"
 [kafka.rdkafka]
 "metadata.broker.list" = "localhost:9092" # or "bootstrap.servers" = "localhost:9092"
 "compression.codec" = "gzip" # "none" | "gzip" | "snappy" | "lz4" | "zstd"
-"message.max.bytes" = "67108864" # 64 MB
+"message.max.bytes" = "134217728" # 128 MB

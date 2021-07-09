@@ -5,7 +5,7 @@ use std::sync::{
 
 use serde::{Deserialize, Serialize};
 
-use sc_chain_spec::{ChainSpec, ChainSpecExtension, GenericChainSpec};
+use sc_chain_spec::{ChainSpecExtension, GenericChainSpec};
 use sc_client_api::{BadBlocks, ForkBlocks};
 use sc_executor::native_executor_instance;
 
@@ -44,9 +44,7 @@ fn main() -> Result<(), ArchiveError> {
 
     let chain_spec = PolkadotChainSpec::from_json_bytes(&include_bytes!("./polkadot.json")[..])
         .expect("generate chain spec from json bytes");
-    let genesis = chain_spec.as_storage_builder();
-
-    let archive = PolkadotArchiveSystemBuilder::with_config(config).build(genesis)?;
+    let archive = PolkadotArchiveSystemBuilder::with_config(config).build(&chain_spec)?;
     archive.drive()?;
 
     let running = Arc::new(AtomicBool::new(true));
