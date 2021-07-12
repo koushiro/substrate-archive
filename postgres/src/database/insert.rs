@@ -196,7 +196,7 @@ impl InsertModel for Vec<MainStorageChangeModel> {
 
         log::debug!(
             target: "postgres",
-            "Insert bulk main storage into postgres, height = [{:?} ~ {:?}]",
+            "Insert bulk main storage into postgres, height = [{:?}~{:?}]",
             self.first().map(|storage| storage.block_num),
             self.last().map(|storage| storage.block_num)
         );

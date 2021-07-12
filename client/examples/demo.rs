@@ -3,18 +3,13 @@ use std::{path::PathBuf, sync::Arc};
 use codec::Decode;
 use sc_client_api::BlockBackend;
 use sc_executor::{WasmExecutionMethod, WasmExecutor};
-use sc_executor_common::error::WasmError;
-use sp_core::{
-    traits::{CallInWasmExt, MissingHostFunctions},
-    Bytes, OpaqueMetadata,
-};
-use sp_externalities::ExternalitiesExt;
+use sc_executor_common::{error::WasmError, runtime_blob::RuntimeBlob};
+use sp_core::{Bytes, OpaqueMetadata};
 use sp_runtime::{
     generic::{self, BlockId},
     traits::BlakeTwo256,
     OpaqueExtrinsic,
 };
-use sp_runtime_interface::with_externalities;
 use sp_state_machine::BasicExternalities;
 use sp_version::RuntimeVersion;
 use sp_wasm_interface::HostFunctions;
@@ -79,27 +74,17 @@ fn print_runtime_info() {
     log::info!("Runtime Metadata: {:?}", hex::encode(metadata.as_slice()));
 }
 
-fn runtime_version(executor: WasmExecutor, code: &[u8]) -> RuntimeVersion {
+fn runtime_version(executor: WasmExecutor, wasm_code: &[u8]) -> RuntimeVersion {
     let mut ext = BasicExternalities::default();
-    ext.register_extension(CallInWasmExt::new(executor));
-
-    let version = ext.execute_with(|| {
-        with_externalities(|mut externalities| {
-            externalities
-                .extension::<CallInWasmExt>()
-                .expect("No `CallInWasmExt` associated for the current context!")
-                .call_in_wasm(
-                    code,
-                    None,
-                    "Core_version",
-                    &[],
-                    &mut BasicExternalities::default(),
-                    MissingHostFunctions::Allow,
-                )
-                .expect("called outside of an Externalities-provided environment")
-        })
-        .expect("wasm execution error")
-    });
+    let version = executor
+        .uncached_call(
+            RuntimeBlob::uncompress_if_needed(wasm_code).unwrap(),
+            &mut ext,
+            true,
+            "Core_version",
+            &[],
+        )
+        .unwrap();
     decode_version(version).expect("decoder error")
 }
 
@@ -122,26 +107,16 @@ fn decode_version(version: Vec<u8>) -> Result<RuntimeVersion, WasmError> {
     }
 }
 
-fn runtime_metadata(executor: WasmExecutor, code: &[u8]) -> OpaqueMetadata {
+fn runtime_metadata(executor: WasmExecutor, wasm_code: &[u8]) -> OpaqueMetadata {
     let mut ext = BasicExternalities::default();
-    ext.register_extension(CallInWasmExt::new(executor));
-
-    let metadata = ext.execute_with(|| {
-        with_externalities(|mut externalities| {
-            externalities
-                .extension::<CallInWasmExt>()
-                .expect("No `CallInWasmExt` associated for the current context!")
-                .call_in_wasm(
-                    code,
-                    None,
-                    "Metadata_metadata",
-                    &[],
-                    &mut BasicExternalities::default(),
-                    MissingHostFunctions::Allow,
-                )
-                .expect("called outside of an Externalities-provided environment")
-        })
-        .expect("wasm execution error")
-    });
+    let metadata = executor
+        .uncached_call(
+            RuntimeBlob::uncompress_if_needed(wasm_code).unwrap(),
+            &mut ext,
+            true,
+            "Metadata_metadata",
+            &[],
+        )
+        .unwrap();
     OpaqueMetadata::decode(&mut metadata.as_slice()).expect("decode error")
 }
