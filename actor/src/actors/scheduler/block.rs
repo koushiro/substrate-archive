@@ -8,7 +8,6 @@ use sc_client_api::{
 };
 use sp_api::{ApiExt, BlockId, Core as CoreApi, ProvideRuntimeApi};
 use sp_runtime::traits::{Block as BlockT, Header as HeaderT};
-use sp_version::RuntimeVersion;
 
 use crate::{
     error::ActorError,
@@ -54,31 +53,34 @@ where
                 block.block.header().hash()
             );
 
-            let runtime_version: RuntimeVersion = self.api.runtime_api().version(&id)?;
-            log::debug!(
-                target: "actor",
-                "Executing Block #{} ({}), version {}",
-                block.block.header().number(),
-                block.block.header().hash(),
-                runtime_version.spec_version
-            );
+            if let Ok(runtime_version) = self.api.runtime_api().version(&id) {
+                log::debug!(
+                    target: "actor",
+                    "Executing Block #{} ({}), version {}",
+                    block.block.header().number(),
+                    block.block.header().hash(),
+                    runtime_version.spec_version
+                );
 
-            let now = Instant::now();
-            let executor =
-                BlockExecutor::new(block.block.clone(), &self.backend, self.api.runtime_api());
-            let changes = executor.into_storage_changes()?;
-            log::debug!(
-                target: "actor",
-                "Took {:?} to execute block #{}",
-                now.elapsed(), block.block.header().number()
-            );
+                let now = Instant::now();
+                let executor =
+                    BlockExecutor::new(block.block.clone(), &self.backend, self.api.runtime_api());
+                let changes = executor.into_storage_changes()?;
+                log::debug!(
+                    target: "actor",
+                    "Took {:?} to execute block #{}",
+                    now.elapsed(), block.block.header().number()
+                );
 
-            Ok(Some(BlockMessage {
-                spec_version: runtime_version.spec_version,
-                inner: block,
-                main_changes: changes.main_storage_changes,
-                child_changes: changes.child_storage_changes,
-            }))
+                Ok(Some(BlockMessage {
+                    spec_version: runtime_version.spec_version,
+                    inner: block,
+                    main_changes: changes.main_storage_changes,
+                    child_changes: changes.child_storage_changes,
+                }))
+            } else {
+                Ok(None)
+            }
         } else {
             Ok(None)
         }
