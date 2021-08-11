@@ -42,20 +42,19 @@ where
 
     pub fn into_storage_changes(self) -> Result<StorageChanges, BlockchainError> {
         let parent_hash = *self.block.header().parent_hash();
-        let parent_block_id = BlockId::Hash(parent_hash);
-        let state = self.backend.state_at(parent_block_id)?;
+        let parent_id = BlockId::Hash(parent_hash);
+        let state = self.backend.state_at(parent_id)?;
 
-        // FIXME: ????
-        // Wasm runtime calculates a different number of digest items
-        // than what we have in the block
-        // We don't do anything with consensus
-        // so digest isn't very important (we don't currently index digest items anyway)
-        // popping a digest item has no effect on storage changes afaik
+        // Wasm runtime calculates a different number of digest items than what we have in the block
+        // popping a digest item has no effect on storage changes afaik.
+        //
+        // Remove all `Seal`s as they are added by the consensus engines after building the block.
+        // On import they are normally removed by the consensus engine.
         let (mut header, ext) = self.block.deconstruct();
-        header.digest_mut().pop();
+        header.digest_mut().logs.retain(|d| d.as_seal().is_none());
         let block = Block::new(header, ext);
 
-        self.api.execute_block(&parent_block_id, block)?;
+        self.api.execute_block(&parent_id, block)?;
         let storage_changes = self
             .api
             .into_storage_changes(&state, None, parent_hash)

@@ -2,12 +2,13 @@ pub mod kafka;
 
 use std::collections::HashMap;
 
+use futures::{future, FutureExt};
 use xtra::{prelude::*, Disconnected};
 
 use sp_runtime::traits::{Block as BlockT, Header as HeaderT};
 
 use crate::message::{
-    BatchBlockMessage, BestBlockMessage, BlockMessage, Die, FinalizedBlockMessage, MetadataMessage,
+    BatchBlockMessage, BlockMessage, Die, FinalizedBlockMessage, MetadataMessage,
 };
 
 pub trait DispatchActor<Block: BlockT>:
@@ -15,7 +16,6 @@ pub trait DispatchActor<Block: BlockT>:
     + Handler<MetadataMessage<Block>>
     + Handler<BlockMessage<Block>>
     + Handler<BatchBlockMessage<Block>>
-    + Handler<BestBlockMessage<Block>>
     + Handler<FinalizedBlockMessage<Block>>
     + Handler<Die>
 {
@@ -28,19 +28,17 @@ where
         + Handler<MetadataMessage<Block>>
         + Handler<BlockMessage<Block>>
         + Handler<BatchBlockMessage<Block>>
-        + Handler<BestBlockMessage<Block>>
         + Handler<FinalizedBlockMessage<Block>>
         + Handler<Die>,
 {
 }
 
-type MessageChannelMap<M> = HashMap<&'static str, Box<dyn StrongMessageChannel<M>>>;
+type MessageChannelMap<M> = HashMap<String, Box<dyn StrongMessageChannel<M>>>;
 
 pub struct Dispatcher<Block: BlockT> {
     metadata: MessageChannelMap<MetadataMessage<Block>>,
     block: MessageChannelMap<BlockMessage<Block>>,
     blocks: MessageChannelMap<BatchBlockMessage<Block>>,
-    best_block: MessageChannelMap<BestBlockMessage<Block>>,
     finalized_block: MessageChannelMap<FinalizedBlockMessage<Block>>,
     die: MessageChannelMap<Die>,
 }
@@ -51,7 +49,6 @@ impl<Block: BlockT> Dispatcher<Block> {
             metadata: HashMap::new(),
             block: HashMap::new(),
             blocks: HashMap::new(),
-            best_block: HashMap::new(),
             finalized_block: HashMap::new(),
             die: HashMap::new(),
         }
@@ -59,15 +56,16 @@ impl<Block: BlockT> Dispatcher<Block> {
 
     pub fn add<D: DispatchActor<Block>>(
         &mut self,
-        name: &'static str,
+        name: impl Into<String>,
         addr: Address<D>,
     ) -> &mut Self {
-        self.metadata.insert(name, Box::new(addr.clone()));
-        self.block.insert(name, Box::new(addr.clone()));
-        self.blocks.insert(name, Box::new(addr.clone()));
-        self.best_block.insert(name, Box::new(addr.clone()));
-        self.finalized_block.insert(name, Box::new(addr.clone()));
-        self.die.insert(name, Box::new(addr));
+        let name = name.into();
+        self.metadata.insert(name.clone(), Box::new(addr.clone()));
+        self.block.insert(name.clone(), Box::new(addr.clone()));
+        self.blocks.insert(name.clone(), Box::new(addr.clone()));
+        self.finalized_block
+            .insert(name.clone(), Box::new(addr.clone()));
+        self.die.insert(name.clone(), Box::new(addr));
         self
     }
 
@@ -75,27 +73,52 @@ impl<Block: BlockT> Dispatcher<Block> {
         &self,
         message: MetadataMessage<Block>,
     ) -> Result<(), Disconnected> {
-        for (name, dispatcher) in &self.metadata {
-            log::debug!(
-                target: "actor",
-                "Dispatch `Metadata` message into `{}`, version = {}",
-                name,
-                message.spec_version
-            );
-            dispatcher.send(message.clone()).await?;
+        let results = future::join_all(self.metadata.iter().map(|(name, dispatcher)| {
+            dispatcher
+                .send(message.clone())
+                .then(move |result| future::ready((name.clone(), result)))
+        }))
+        .await;
+        for (name, result) in results {
+            match result {
+                Ok(_) => log::debug!(
+                    target: "actor",
+                    "Dispatch `Metadata` message into `{}`, version = {}",
+                    name,
+                    message.spec_version
+                ),
+                Err(err) => log::error!(
+                    target: "actor",
+                    "Failed to dispatch `Metadata` message into `{}`, version = {}: {}",
+                    name,
+                    message.spec_version,
+                    err
+                ),
+            }
         }
         Ok(())
     }
 
     pub async fn dispatch_block(&self, message: BlockMessage<Block>) -> Result<(), Disconnected> {
-        for (name, dispatcher) in &self.block {
-            log::debug!(
+        let results = future::join_all(self.block.iter().map(|(name, dispatcher)| {
+            dispatcher
+                .send(message.clone())
+                .then(move |result| future::ready((name.clone(), result)))
+        }))
+        .await;
+        for (name, result) in results {
+            match result {
+                Ok(_) => log::debug!(
                 target: "actor",
                 "Dispatch `Block` message into `{}`, height = {}",
-                name,
-                message.inner.block.header().number()
-            );
-            dispatcher.send(message.clone()).await?;
+                name, message.inner.block.header().number()
+                ),
+                Err(err) => log::error!(
+                    target: "actor",
+                    "Failed to dispatch `Block` message into `{}`, height = {}: {}",
+                    name, message.inner.block.header().number(), err
+                ),
+            }
         }
         Ok(())
     }
@@ -104,31 +127,30 @@ impl<Block: BlockT> Dispatcher<Block> {
         &self,
         message: BatchBlockMessage<Block>,
     ) -> Result<(), Disconnected> {
-        for (name, dispatcher) in &self.blocks {
-            log::debug!(
-                target: "actor",
-                "Dispatch `BatchBlock` message into `{}`, height = [{:?}~{:?}]",
-                name,
-                message.inner().first().map(|block| block.inner.block.header().number()),
-                message.inner().last().map(|block| block.inner.block.header().number())
-            );
-            dispatcher.send(message.clone()).await?;
-        }
-        Ok(())
-    }
-
-    pub async fn dispatch_best_block(
-        &self,
-        message: BestBlockMessage<Block>,
-    ) -> Result<(), Disconnected> {
-        for (name, dispatcher) in &self.best_block {
-            log::debug!(
-                target: "actor",
-                "Dispatch `BestBlock` message into `{}`, height = {}",
-                name,
-                message.block_num
-            );
-            dispatcher.send(message.clone()).await?;
+        let results = future::join_all(self.blocks.iter().map(|(name, dispatcher)| {
+            dispatcher
+                .send(message.clone())
+                .then(move |result| future::ready((name.clone(), result)))
+        }))
+        .await;
+        for (name, result) in results {
+            match result {
+                Ok(_) => log::debug!(
+                    target: "actor",
+                    "Dispatch `BatchBlock` message into `{}`, height = [{:?}~{:?}]",
+                    name,
+                    message.inner().first().map(|block| block.inner.block.header().number()),
+                    message.inner().last().map(|block| block.inner.block.header().number())
+                ),
+                Err(err) => log::error!(
+                    target: "actor",
+                    "Failed to dispatch `BatchBlock` message into `{}`, height = [{:?}~{:?}]: {}",
+                    name,
+                    message.inner().first().map(|block| block.inner.block.header().number()),
+                    message.inner().last().map(|block| block.inner.block.header().number()),
+                    err
+                ),
+            }
         }
         Ok(())
     }
@@ -137,22 +159,45 @@ impl<Block: BlockT> Dispatcher<Block> {
         &self,
         message: FinalizedBlockMessage<Block>,
     ) -> Result<(), Disconnected> {
-        for (name, dispatcher) in &self.finalized_block {
-            log::debug!(
-                target: "actor",
-                "Dispatch `FinalizedBlock` message into `{}`, height = {}",
-                name,
-                message.block_num
-            );
-            dispatcher.send(message.clone()).await?;
+        let results = future::join_all(self.finalized_block.iter().map(|(name, dispatcher)| {
+            dispatcher
+                .send(message.clone())
+                .then(move |result| future::ready((name.clone(), result)))
+        }))
+        .await;
+        for (name, result) in results {
+            match result {
+                Ok(_) => log::debug!(
+                    target: "actor",
+                    "Dispatch `FinalizedBlock` message into `{}`, height = {}",
+                    name, message.block_num
+                ),
+                Err(err) => log::error!(
+                    target: "actor",
+                    "Failed to dispatch `FinalizedBlock` message into `{}`, height = {}: {}",
+                    name, message.block_num, err
+                ),
+            }
         }
         Ok(())
     }
 
     pub async fn dispatch_die(&self, message: Die) -> Result<(), Disconnected> {
-        for (name, dispatcher) in &self.die {
-            log::debug!(target: "actor", "Dispatch `Die` message into `{}`", name);
-            dispatcher.send(message).await?;
+        let results = future::join_all(self.die.iter().map(|(name, dispatcher)| {
+            dispatcher
+                .send(message)
+                .then(move |result| future::ready((name.clone(), result)))
+        }))
+        .await;
+        for (name, result) in results {
+            match result {
+                Ok(_) => log::debug!(target: "actor", "Dispatch `Die` message into `{}`", name),
+                Err(err) => log::error!(
+                    target: "actor",
+                    "Failed to dispatch `Die` message into `{}`: {}",
+                    name, err
+                ),
+            }
         }
         Ok(())
     }

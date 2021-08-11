@@ -19,8 +19,13 @@ pub struct ArchiveConfig {
     pub(crate) logger: LoggerConfig,
     pub(crate) client: ClientConfig,
     pub(crate) postgres: PostgresConfig,
-    pub(crate) kafka: Option<KafkaConfig>,
+    pub(crate) dispatcher: Option<ArchiveDispatcherConfig>,
     pub(crate) control: ControlConfig,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ArchiveDispatcherConfig {
+    pub(crate) kafka: Option<KafkaConfig>,
 }
 
 #[derive(Clone, Debug, StructOpt)]

@@ -7,7 +7,7 @@ pub use archive_postgres::PostgresConfig;
 pub struct ActorConfig {
     pub genesis: Storage,
     pub postgres: PostgresConfig,
-    pub dispatcher: DispatcherConfig,
+    pub dispatcher: Option<DispatcherConfig>,
     pub max_block_load: u32,
     pub interval_ms: u64,
 }

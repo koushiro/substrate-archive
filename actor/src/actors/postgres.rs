@@ -17,13 +17,13 @@ use crate::{
 
 pub struct PostgresActor<Block: BlockT> {
     db: PostgresDb,
-    dispatcher: Dispatcher<Block>,
+    dispatcher: Option<Dispatcher<Block>>,
 }
 
 impl<Block: BlockT> PostgresActor<Block> {
     pub async fn new(
         config: PostgresConfig,
-        dispatcher: Dispatcher<Block>,
+        dispatcher: Option<Dispatcher<Block>>,
     ) -> Result<Self, ActorError> {
         let db = PostgresDb::new(config).await?;
         Ok(Self { db, dispatcher })
@@ -33,7 +33,9 @@ impl<Block: BlockT> PostgresActor<Block> {
         self.db
             .insert(MetadataModel::from(metadata.clone()))
             .await?;
-        self.dispatcher.dispatch_metadata(metadata).await?;
+        if let Some(dispatcher) = &self.dispatcher {
+            dispatcher.dispatch_metadata(metadata).await?;
+        }
         Ok(())
     }
 
@@ -53,7 +55,9 @@ impl<Block: BlockT> PostgresActor<Block> {
         self.db.insert(main_storage).await?;
         // TODO: insert child storage into database.
         // self.db.insert(_child_storage).await?;
-        self.dispatcher.dispatch_block(message).await?;
+        if let Some(dispatcher) = &self.dispatcher {
+            dispatcher.dispatch_block(message).await?;
+        }
         Ok(())
     }
 
@@ -87,7 +91,9 @@ impl<Block: BlockT> PostgresActor<Block> {
         self.db.insert(main_storages).await?;
         // TODO: insert child storage into database.
         // self.db.insert(_child_storages).await?;
-        self.dispatcher.dispatch_batch_block(message).await?;
+        if let Some(dispatcher) = &self.dispatcher {
+            dispatcher.dispatch_batch_block(message).await?;
+        }
         Ok(())
     }
 
@@ -95,7 +101,6 @@ impl<Block: BlockT> PostgresActor<Block> {
         self.db
             .insert(BestBlockModel::from(message.clone()))
             .await?;
-        self.dispatcher.dispatch_best_block(message).await?;
         Ok(())
     }
 
@@ -106,7 +111,9 @@ impl<Block: BlockT> PostgresActor<Block> {
         self.db
             .insert(FinalizedBlockModel::from(message.clone()))
             .await?;
-        self.dispatcher.dispatch_finalized_block(message).await?;
+        if let Some(dispatcher) = &self.dispatcher {
+            dispatcher.dispatch_finalized_block(message).await?;
+        }
         Ok(())
     }
 }
@@ -251,8 +258,10 @@ impl<Block: BlockT> Handler<DbFinalizedBlock> for PostgresActor<Block> {
 impl<Block: BlockT> Handler<Die> for PostgresActor<Block> {
     async fn handle(&mut self, message: Die, ctx: &mut Context<Self>) -> <Die as Message>::Result {
         log::info!(target: "actor", "Stopping Postgres Actor");
-        if let Err(err) = self.dispatcher.dispatch_die(message).await {
-            log::error!(target: "actor", "{}", err);
+        if let Some(dispatcher) = &self.dispatcher {
+            if let Err(err) = dispatcher.dispatch_die(message).await {
+                log::error!(target: "actor", "{}", err);
+            }
         }
         ctx.stop();
     }

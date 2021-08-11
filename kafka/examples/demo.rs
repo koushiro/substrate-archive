@@ -13,7 +13,6 @@ async fn main() -> Result<(), KafkaError> {
         topic: KafkaTopicConfig {
             metadata: "polkadot-metadata".into(),
             block: "polkadot-block".into(),
-            best_block: "polkadot-best-block".into(),
             finalized_block: "polkadot-finalized-block".into(),
         },
         rdkafka: {
@@ -57,11 +56,6 @@ async fn main() -> Result<(), KafkaError> {
         };
         producer.send(block).await?;
 
-        let best_block = BestBlockPayloadDemo {
-            block_num: i,
-            block_hash: "0x00".into(),
-        };
-        producer.send(best_block).await?;
         let finalized_block = FinalizedBlockPayloadDemo {
             block_num: i,
             block_hash: "0x00".into(),

@@ -54,8 +54,7 @@ where
                 block.block.header().hash()
             );
 
-            let api = self.api.runtime_api();
-            let runtime_version: RuntimeVersion = api.version(&id)?;
+            let runtime_version: RuntimeVersion = self.api.runtime_api().version(&id)?;
             log::debug!(
                 target: "actor",
                 "Executing Block #{} ({}), version {}",
@@ -65,9 +64,8 @@ where
             );
 
             let now = Instant::now();
-            // Must re-construct a new runtime api for executing block.
-            let api = self.api.runtime_api();
-            let executor = BlockExecutor::new(block.block.clone(), &self.backend, api);
+            let executor =
+                BlockExecutor::new(block.block.clone(), &self.backend, self.api.runtime_api());
             let changes = executor.into_storage_changes()?;
             log::debug!(
                 target: "actor",

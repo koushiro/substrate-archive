@@ -99,7 +99,7 @@ impl<B: BlockT> SendPayload for MetadataPayload<B> {
         let payload = serde_json::to_string(&self)
             .expect("Serialize metadata payload shouldn't be fail; qed");
         let key = self.spec_version.to_string();
-        producer.send_inner(&topic, &payload, Some(&key)).await
+        producer.send_inner(topic, &payload, Some(&key)).await
     }
 }
 
@@ -116,23 +116,7 @@ impl<B: BlockT> SendPayload for BlockPayload<B> {
         let payload = serde_json::to_string(&self)
             .expect("Serialize best block payload shouldn't be fail; qed");
         let key = self.block_num.to_string();
-        producer.send_inner(&topic, &payload, Some(&key)).await
-    }
-}
-
-#[async_trait::async_trait]
-impl<B: BlockT> SendPayload for BestBlockPayload<B> {
-    async fn send(self, producer: &KafkaProducer) -> Result<(), KafkaError> {
-        log::info!(
-            target: "kafka",
-            "Publish best block to kafka, number = {}, hash = {}",
-            self.block_num,
-            self.block_hash
-        );
-        let topic = &producer.config.topic.best_block;
-        let payload = serde_json::to_string(&self)
-            .expect("Serialize best block payload shouldn't be fail; qed");
-        producer.send_inner(&topic, &payload, None).await
+        producer.send_inner(topic, &payload, Some(&key)).await
     }
 }
 
@@ -148,7 +132,7 @@ impl<B: BlockT> SendPayload for FinalizedBlockPayload<B> {
         let topic = &producer.config.topic.finalized_block;
         let payload = serde_json::to_string(&self)
             .expect("Serialize finalized block payload shouldn't be fail; qed");
-        producer.send_inner(&topic, &payload, None).await
+        producer.send_inner(topic, &payload, None).await
     }
 }
 
@@ -164,7 +148,7 @@ impl SendPayload for MetadataPayloadForDemo {
         let payload = serde_json::to_string(&self)
             .expect("Serialize metadata payload shouldn't be fail; qed");
         let key = self.spec_version.to_string();
-        producer.send_inner(&topic, &payload, Some(&key)).await
+        producer.send_inner(topic, &payload, Some(&key)).await
     }
 }
 
@@ -181,23 +165,7 @@ impl SendPayload for BlockPayloadForDemo {
         let payload = serde_json::to_string(&self)
             .expect("Serialize best block payload shouldn't be fail; qed");
         let key = self.block_num.to_string();
-        producer.send_inner(&topic, &payload, Some(&key)).await
-    }
-}
-
-#[async_trait::async_trait]
-impl SendPayload for BestBlockPayloadDemo {
-    async fn send(self, producer: &KafkaProducer) -> Result<(), KafkaError> {
-        log::info!(
-            target: "kafka",
-            "Publish best block to kafka, number = {}, hash = {}",
-            self.block_num,
-            self.block_hash
-        );
-        let topic = &producer.config.topic.best_block;
-        let payload = serde_json::to_string(&self)
-            .expect("Serialize best block payload shouldn't be fail; qed");
-        producer.send_inner(&topic, &payload, None).await
+        producer.send_inner(topic, &payload, Some(&key)).await
     }
 }
 
@@ -213,6 +181,6 @@ impl SendPayload for FinalizedBlockPayloadDemo {
         let topic = &producer.config.topic.finalized_block;
         let payload = serde_json::to_string(&self)
             .expect("Serialize finalized block payload shouldn't be fail; qed");
-        producer.send_inner(&topic, &payload, None).await
+        producer.send_inner(topic, &payload, None).await
     }
 }

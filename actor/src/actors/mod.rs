@@ -92,18 +92,22 @@ where
     }
 
     fn spawn_dispatcher(
-        config: DispatcherConfig,
-    ) -> Result<dispatcher::Dispatcher<Block>, ActorError> {
-        let mut dispatcher = dispatcher::Dispatcher::<Block>::new();
-        if let Some(config) = config.kafka {
-            let kafka = dispatcher::kafka::KafkaActor::<Block>::new(config)?
-                .create(None)
-                .spawn_global();
-            log::info!(target: "actor", "Spawn Kafka Actor");
-            dispatcher.add("kafka", kafka);
-            log::info!(target: "actor", "Add Kafka Actor into dispatcher");
+        config: Option<DispatcherConfig>,
+    ) -> Result<Option<dispatcher::Dispatcher<Block>>, ActorError> {
+        if let Some(config) = config {
+            let mut dispatcher = dispatcher::Dispatcher::<Block>::new();
+            if let Some(config) = config.kafka {
+                let kafka = dispatcher::kafka::KafkaActor::<Block>::new(config)?
+                    .create(None)
+                    .spawn_global();
+                log::info!(target: "actor", "Spawn Kafka Actor");
+                dispatcher.add("kafka", kafka);
+                log::info!(target: "actor", "Add Kafka Actor into dispatcher");
+            }
+            Ok(Some(dispatcher))
+        } else {
+            Ok(None)
         }
-        Ok(dispatcher)
     }
 
     pub async fn tick_interval(&self) -> Result<(), ActorError> {

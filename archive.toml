@@ -25,13 +25,13 @@ secondary_db_path = "./rocksdb_secondary"
 [client.executor]
 wasm_exec_method = "Compiled" # or "Interpreted"
 default_heap_pages = 4096
-max_runtime_instances = 32
+max_runtime_instances = 8
 
 ##################################
 # Archive control configuration #
 ##################################
 [control]
-max_block_load = 100
+max_block_load = 10
 interval_ms = 1000
 
 ##################################
@@ -44,18 +44,15 @@ max_connections = 8
 connect_timeout = 10
 disable_statement_logging = false
 
-##################################
-# Archive kafka configuration #
-##################################
-[kafka]
+####################################
+# Archive dispatcher configuration #
+####################################
+[dispatcher.kafka]
 queue_timeout = 0
-
-[kafka.topic]
+[dispatcher.kafka.topic]
 metadata = "polkadot-metadata"
 block = "polkadot-block"
-best_block = "polkadot-best-block"
 finalized_block = "polkadot-finalized-block"
-
 ## https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
 ##
 ## https://stackoverflow.com/questions/59322133/kafka-broker-message-size-too-large
@@ -68,7 +65,7 @@ finalized_block = "polkadot-finalized-block"
 ## Consumer:
 ##   `max.partition.fetch.bytes`: default 1048576 (1 MiB)
 ##   `fetch.max.bytes`: default 57671680 (55 MiB)
-[kafka.rdkafka]
+[dispatcher.kafka.rdkafka]
 "metadata.broker.list" = "localhost:9092" # or "bootstrap.servers" = "localhost:9092"
 "compression.codec" = "none" # "none" | "gzip" | "snappy" | "lz4" | "zstd"
 "message.max.bytes" = "134217728" # 128 MB

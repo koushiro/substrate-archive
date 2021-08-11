@@ -18,7 +18,7 @@
    - metadata: Get the metadata (spec version) of the blocks.
    - database(postgres): Store metadata and block (with storage changes) message into database.
    - dispatcher: Dispatch metadata and block message (with storage changes) to other targets.
-     - kafka: Publish the metadata and block message (with storage changes) to kakfa.
+     - kafka: Publish the metadata and block message (with storage changes) to kafka.
  - `archive-primitives`: Runtime primitives.
 
 ## Architecture

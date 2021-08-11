@@ -38,7 +38,10 @@ frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch =
 [package]
 name = "archive"
 version = "0.1.0"
-authors = ["Patract <https://github.com/patractlabs>"]
+authors = [
+  "Patract <https://github.com/patractlabs>",
+  "Andrew Plaza <andrew.plaza@parity.io>"
+]
 edition = "2018"
 description = "Synchronize the substrate-backed chain to index all Blocks, State, and Extrinsic data."
 
@@ -92,3 +95,7 @@ required-features = ["polkadot"]
 name = "kusama-archive"
 path = "bin/kusama/kusama.rs"
 required-features = ["kusama"]
+
+[profile.release]
+# Substrate runtime requires unwinding.
+panic = "unwind"

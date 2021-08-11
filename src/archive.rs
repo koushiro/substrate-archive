@@ -166,9 +166,9 @@ where
             ActorConfig {
                 genesis,
                 postgres: self.config.postgres,
-                dispatcher: DispatcherConfig {
-                    kafka: self.config.kafka,
-                },
+                dispatcher: self.config.dispatcher.map(|dispatcher| DispatcherConfig {
+                    kafka: dispatcher.kafka,
+                }),
                 max_block_load: self.config.control.max_block_load,
                 interval_ms: self.config.control.interval_ms,
             },
