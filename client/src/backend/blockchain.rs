@@ -217,6 +217,7 @@ where
                 genesis_hash: meta.genesis_hash,
                 finalized_hash: meta.finalized_hash,
                 finalized_number: meta.finalized_number,
+                finalized_state: None,
                 // log::warn!("Leaves are not counted on the read-only backend!");
                 number_leaves: 0,
             },
@@ -228,6 +229,7 @@ where
                     genesis_hash: Default::default(),
                     finalized_hash: Default::default(),
                     finalized_number: Zero::zero(),
+                    finalized_state: None,
                     number_leaves: 0,
                 }
             }

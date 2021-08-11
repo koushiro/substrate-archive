@@ -9,7 +9,7 @@ use sc_client_api::{
     execution_extensions::ExecutionExtensions,
 };
 use sp_api::{
-    ApiError, ApiRef, BlockId, CallApiAt, CallApiAtParams, ConstructRuntimeApi, Core as CoreApi,
+    ApiError, ApiRef, BlockId, CallApiAt, CallApiAtParams, ConstructRuntimeApi,
     Metadata as MetadataApi, NativeOrEncoded, ProvideRuntimeApi,
 };
 use sp_blockchain::HeaderBackend;
@@ -135,27 +135,6 @@ where
 
         Ok((storage, configs))
     }
-
-    /// Prepare in-memory header that is used in execution environment.
-    fn prepare_environment_block(
-        &self,
-        parent: &BlockId<Block>,
-    ) -> BlockchainResult<Block::Header> {
-        let parent_hash = self
-            .backend
-            .blockchain()
-            .expect_block_hash_from_id(parent)?;
-        Ok(<<Block as BlockT>::Header as HeaderT>::new(
-            self.backend
-                .blockchain()
-                .expect_block_number_from_id(parent)?
-                + One::one(),
-            Default::default(),
-            Default::default(),
-            parent_hash,
-            Default::default(),
-        ))
-    }
 }
 
 impl<Block, Backend, Executor, RA> ProvideRuntimeApi<Block> for Client<Block, Backend, Executor, RA>
@@ -183,12 +162,10 @@ where
     fn call_api_at<
         R: Encode + Decode + PartialEq,
         NC: FnOnce() -> Result<R, ApiError> + UnwindSafe,
-        C: CoreApi<Block>,
     >(
         &self,
-        params: CallApiAtParams<'_, Block, C, NC, Self::StateBackend>,
+        params: CallApiAtParams<'_, Block, NC, Self::StateBackend>,
     ) -> Result<NativeOrEncoded<R>, ApiError> {
-        let core_api = params.core_api;
         let at = params.at;
 
         let (manager, extensions) = self
@@ -196,18 +173,12 @@ where
             .manager_and_extensions(at, params.context);
 
         self.executor
-            .contextual_call(
-                || {
-                    core_api
-                        .initialize_block(at, &self.prepare_environment_block(at)?)
-                        .map_err(BlockchainError::RuntimeApiError)
-                },
+            .contextual_call::<fn(_, _) -> _, _, _>(
                 at,
                 params.function,
                 &params.arguments,
                 params.overlayed_changes,
                 Some(params.storage_transaction_cache),
-                params.initialize_block,
                 manager,
                 params.native_call,
                 params.recorder,

@@ -51,6 +51,15 @@ where
         Ok(())
     }
 
+    fn set_genesis_state(
+        &mut self,
+        _storage: Storage,
+        _commit: bool,
+    ) -> BlockchainResult<Block::Hash> {
+        log::warn!("Cannot set genesis state of a read-only backend, storage not updated");
+        Ok(Default::default())
+    }
+
     fn reset_storage(&mut self, _storage: Storage) -> BlockchainResult<Block::Hash> {
         log::warn!("Cannot modify storage of a read-only backend, storage not reset");
         Ok(Default::default())

@@ -58,6 +58,7 @@ where
             offchain_worker_enabled: config.offchain_worker.enabled,
             offchain_indexing_api: config.offchain_worker.indexing_enabled,
             wasm_runtime_overrides: config.wasm_runtime_overrides,
+            no_genesis: false,
             wasm_runtime_substitutes: config
                 .wasm_runtime_substitutes
                 .into_iter()
