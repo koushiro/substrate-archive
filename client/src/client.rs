@@ -310,6 +310,21 @@ where
         Ok(keys)
     }
 
+    fn child_storage_keys_iter<'a>(
+        &self,
+        id: &BlockId<Block>,
+        child_info: ChildInfo,
+        prefix: Option<&'a StorageKey>,
+        start_key: Option<&StorageKey>,
+    ) -> BlockchainResult<KeyIterator<'a, Backend::State, Block>> {
+        let state = self.state_at(*id)?;
+        let start_key = start_key
+            .or(prefix)
+            .map(|key| key.0.clone())
+            .unwrap_or_else(Vec::new);
+        Ok(KeyIterator::new_child(state, child_info, prefix, start_key))
+    }
+
     fn child_storage_hash(
         &self,
         id: &BlockId<Block>,

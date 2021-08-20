@@ -13,5 +13,5 @@ serde_json = "1.0"
 sqlx = { version = "0.5", features = ["postgres", "runtime-tokio-rustls", "json"] }
 
 [dev-dependencies]
-env_logger = "0.8"
-tokio = { version = "1.6", features = ["macros", "rt-multi-thread"] }
+env_logger = "0.9"
+tokio = { version = "1.10", features = ["macros", "rt-multi-thread"] }

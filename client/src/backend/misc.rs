@@ -32,6 +32,7 @@ where
         &mut self,
         _header: Block::Header,
         _body: Option<Vec<Block::Extrinsic>>,
+        _indexed_body: Option<Vec<Vec<u8>>>,
         _justifications: Option<Justifications>,
         _state: NewBlockState,
     ) -> BlockchainResult<()> {
