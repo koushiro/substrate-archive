@@ -367,6 +367,12 @@ impl xtra::Message for BestAndFinalized {
     type Result = (u32, u32);
 }
 
+#[derive(Copy, Clone, Debug)]
+pub struct CatchupFinalized;
+impl xtra::Message for CatchupFinalized {
+    type Result = ();
+}
+
 // ============================================================================
 // `Command` Actor Message
 // ============================================================================

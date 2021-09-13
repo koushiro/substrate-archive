@@ -72,6 +72,8 @@ impl LoggerConfig {
             .level_for("header", log::LevelFilter::Info)
             // disable the debug log of wasm_overrides
             .level_for("wasm_overrides", log::LevelFilter::Info)
+            // disable the debug log of wasm-heap
+            .level_for("wasm-heap", log::LevelFilter::Info)
             // disable the debug log of runtime
             .level_for("runtime", log::LevelFilter::Info)
             .level_for("frame_executive", log::LevelFilter::Error)

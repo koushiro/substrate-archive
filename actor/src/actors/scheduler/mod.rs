@@ -38,6 +38,7 @@ where
     blocks: Vec<Address<BlockActor<Block, Backend, Api>>>,
 
     curr_block: u32,
+    catchup_finalized: bool,
 
     max_block_load: u32,
     interval_ms: u64,
@@ -86,6 +87,7 @@ where
             best_and_finalized,
             blocks,
             curr_block: 0,
+            catchup_finalized: false,
             max_block_load,
             interval_ms,
         }
@@ -146,11 +148,23 @@ where
         let (_best_block, finalized_block) = self.best_and_finalized().await?;
         if self.curr_block + self.max_block_load <= finalized_block {
             // Haven't caught up with the latest finalized block
-            self.tick_batch().await
+            self.tick_batch().await?;
         } else {
             // It's about to catch up with the latest finalized block
-            self.tick_one().await
+            self.tick_one().await?;
         }
+
+        // start to dispatch finalized block
+        if !self.catchup_finalized && self.curr_block > finalized_block {
+            log::info!(
+                target: "actor", "Scheduler catchup the finalized block (curr #{}, finalized #{})",
+                self.curr_block, finalized_block
+            );
+            self.catchup_finalized = true;
+            self.db.send(CatchupFinalized).await?;
+        }
+
+        Ok(())
     }
 
     async fn tick_one(&mut self) -> Result<(), ActorError> {

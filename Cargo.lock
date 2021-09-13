@@ -174,7 +174,7 @@ dependencies = [
  "sp-runtime",
  "structopt",
  "thiserror",
- "tokio 1.10.0",
+ "tokio 1.11.0",
  "toml",
 ]
 
@@ -203,7 +203,7 @@ dependencies = [
  "sp-storage",
  "sp-version",
  "thiserror",
- "tokio 1.10.0",
+ "tokio 1.11.0",
  "xtra",
 ]
 
@@ -257,7 +257,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-storage",
- "tokio 1.10.0",
+ "tokio 1.11.0",
 ]
 
 [[package]]
@@ -271,7 +271,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
- "tokio 1.10.0",
+ "tokio 1.11.0",
 ]
 
 [[package]]
@@ -1895,15 +1895,15 @@ dependencies = [
 
 [[package]]
 name = "flume"
-version = "0.10.8"
+version = "0.10.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e90cc80fad5bb391b38127896b0fa27d97e7fef74742797f4da518d67e1292f"
+checksum = "24c3fd473b3a903a62609e413ed7538f99e10b665ecb502b5e481a95283f8ab4"
 dependencies = [
  "futures-core",
  "futures-sink",
  "nanorand",
  "pin-project 1.0.8",
- "spinning_top",
+ "spin 0.9.2",
 ]
 
 [[package]]
@@ -5961,7 +5961,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "slab",
- "tokio 1.10.0",
+ "tokio 1.11.0",
 ]
 
 [[package]]
@@ -7970,10 +7970,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13287b4da9d1207a4f4929ac390916d64eacfe236a487e9a9f5b3be392be5162"
 
 [[package]]
-name = "spinning_top"
-version = "0.2.4"
+name = "spin"
+version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75adad84ee84b521fb2cca2d4fd0f1dab1d8d026bda3c5bea4ca63b5f9f9293c"
+checksum = "511254be0c5bcf062b019a6c89c01a664aa359ded62f78aa72c6fc137c0590e5"
 dependencies = [
  "lock_api 0.4.4",
 ]
@@ -8004,9 +8004,9 @@ dependencies = [
 
 [[package]]
 name = "sqlx"
-version = "0.5.6"
+version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b977121ecc75cadd442a6a8c600f5ded6d7117a46d55ed417a815bd94b2af237"
+checksum = "0e4b94ab0f8c21ee4899b93b06451ef5d965f1a355982ee73684338228498440"
 dependencies = [
  "sqlx-core",
  "sqlx-macros",
@@ -8014,9 +8014,9 @@ dependencies = [
 
 [[package]]
 name = "sqlx-core"
-version = "0.5.6"
+version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6da11206ae9ba3ececf83d44aef533c0d8176ae430cfaa14b408ce8b6bc4ab4b"
+checksum = "ec28b91a01e1fe286d6ba66f68289a2286df023fc97444e1fd86c2fd6d5dc026"
 dependencies = [
  "ahash",
  "atoi",
@@ -8065,9 +8065,9 @@ dependencies = [
 
 [[package]]
 name = "sqlx-macros"
-version = "0.5.6"
+version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "419f9005ad3b065ab4e774361b0d56a24e8e3dc9b2c9ddeaf018b5fdc1166ec2"
+checksum = "4dc33c35d54774eed73d54568d47a6ac099aed8af5e1556a017c131be88217d5"
 dependencies = [
  "dotenv",
  "either",
@@ -8086,12 +8086,12 @@ dependencies = [
 
 [[package]]
 name = "sqlx-rt"
-version = "0.5.6"
+version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52d39baa13314f936c5991429b0b656980f52d23dfb15078bbea2c51f5086eeb"
+checksum = "14302b678d9c76b28f2e60115211e25e0aabc938269991745a169753dc00e35c"
 dependencies = [
  "once_cell",
- "tokio 1.10.0",
+ "tokio 1.11.0",
  "tokio-rustls 0.22.0",
 ]
 
@@ -8462,9 +8462,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.10.0"
+version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01cf844b23c6131f624accf65ce0e4e9956a8bb329400ea5bcc26ae3a5c20b0b"
+checksum = "b4efe6fc2395938c8155973d7be49fe8d03a843726e285e100a8a383cc0154ce"
 dependencies = [
  "autocfg",
  "bytes 1.0.1",
@@ -8603,7 +8603,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc6844de72e57df1980054b38be3a9f4702aba4858be64dd700181a8a6d0e1b6"
 dependencies = [
  "rustls 0.19.1",
- "tokio 1.10.0",
+ "tokio 1.11.0",
  "webpki",
 ]
 
@@ -8624,7 +8624,7 @@ checksum = "7b2f3f698253f03119ac0102beaa64f67a67e08074d03a22d18784104543727f"
 dependencies = [
  "futures-core",
  "pin-project-lite 0.2.7",
- "tokio 1.10.0",
+ "tokio 1.11.0",
 ]
 
 [[package]]
@@ -8906,7 +8906,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f559b464de2e2bdabcac6a210d12e9b5a5973c251e102c44c585c71d51bd78e"
 dependencies = [
  "cfg-if 1.0.0",
- "rand 0.8.4",
+ "rand 0.7.3",
  "static_assertions",
 ]
 
@@ -9652,7 +9652,7 @@ dependencies = [
  "futures-timer 3.0.2",
  "futures-util",
  "pollster",
- "tokio 1.10.0",
+ "tokio 1.11.0",
 ]
 
 [[package]]

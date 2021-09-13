@@ -10,14 +10,17 @@ use crate::{
     actors::dispatcher::Dispatcher,
     error::ActorError,
     message::{
-        BatchBlockMessage, BestBlockMessage, BlockMessage, DbBestBlock, DbFinalizedBlock,
-        DbIfMetadataExist, DbMaxBlock, Die, FinalizedBlockMessage, MetadataMessage,
+        BatchBlockMessage, BestBlockMessage, BlockMessage, CatchupFinalized, DbBestBlock,
+        DbFinalizedBlock, DbIfMetadataExist, DbMaxBlock, Die, FinalizedBlockMessage,
+        MetadataMessage,
     },
 };
 
 pub struct PostgresActor<Block: BlockT> {
     db: PostgresDb,
     dispatcher: Option<Dispatcher<Block>>,
+    // Means if the current block of scheduler catching up the finalized block.
+    catchup_finalized: bool,
 }
 
 impl<Block: BlockT> PostgresActor<Block> {
@@ -26,7 +29,11 @@ impl<Block: BlockT> PostgresActor<Block> {
         dispatcher: Option<Dispatcher<Block>>,
     ) -> Result<Self, ActorError> {
         let db = PostgresDb::new(config).await?;
-        Ok(Self { db, dispatcher })
+        Ok(Self {
+            db,
+            dispatcher,
+            catchup_finalized: false,
+        })
     }
 
     async fn metadata_handler(&self, metadata: MetadataMessage<Block>) -> Result<(), ActorError> {
@@ -111,8 +118,10 @@ impl<Block: BlockT> PostgresActor<Block> {
         self.db
             .insert(FinalizedBlockModel::from(message.clone()))
             .await?;
-        if let Some(dispatcher) = &self.dispatcher {
-            dispatcher.dispatch_finalized_block(message).await?;
+        if self.catchup_finalized {
+            if let Some(dispatcher) = &self.dispatcher {
+                dispatcher.dispatch_finalized_block(message).await?;
+            }
         }
         Ok(())
     }
@@ -251,6 +260,18 @@ impl<Block: BlockT> Handler<DbFinalizedBlock> for PostgresActor<Block> {
                 None
             }
         }
+    }
+}
+
+#[async_trait::async_trait]
+impl<Block: BlockT> Handler<CatchupFinalized> for PostgresActor<Block> {
+    async fn handle(
+        &mut self,
+        _: CatchupFinalized,
+        _: &mut Context<Self>,
+    ) -> <CatchupFinalized as Message>::Result {
+        self.catchup_finalized = true;
+        log::info!(target: "actor", "Postgres receive the CatchupFinalized");
     }
 }
 
