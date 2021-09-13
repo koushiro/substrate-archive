@@ -1,7 +1,7 @@
 mod best_finalized;
 mod block;
 
-use std::{sync::Arc, time::Duration};
+use std::{cmp, sync::Arc, time::Duration};
 
 use xtra::{prelude::*, spawn::TokioGlobalSpawnExt};
 
@@ -16,6 +16,7 @@ use sp_storage::Storage;
 use self::{best_finalized::BestAndFinalizedActor, block::BlockActor};
 use crate::{
     actors::{metadata::MetadataActor, postgres::PostgresActor},
+    config::SchedulerConfig,
     error::ActorError,
     message::*,
 };
@@ -26,8 +27,6 @@ where
     Backend: backend::Backend<Block> + 'static,
     Api: Send + Sync + 'static,
 {
-    genesis: Storage,
-
     backend: Arc<Backend>,
     api: Arc<Api>,
 
@@ -37,11 +36,10 @@ where
     best_and_finalized: Address<BestAndFinalizedActor<Block, Backend>>,
     blocks: Vec<Address<BlockActor<Block, Backend, Api>>>,
 
+    genesis: Storage,
+    config: SchedulerConfig,
     curr_block: u32,
     catchup_finalized: bool,
-
-    max_block_load: u32,
-    interval_ms: u64,
 }
 
 impl<Block, Backend, Api> Scheduler<Block, Backend, Api>
@@ -53,23 +51,25 @@ where
         CoreApi<Block> + ApiExt<Block, StateBackend = StateBackendFor<Backend, Block>>,
 {
     pub fn new(
-        genesis: Storage,
         backend: Arc<Backend>,
         api: Arc<Api>,
         db: Address<PostgresActor<Block>>,
         metadata: Address<MetadataActor<Block>>,
-        max_block_load: u32,
-        interval_ms: u64,
+        genesis: Storage,
+        config: SchedulerConfig,
     ) -> Self {
-        let best_and_finalized =
-            BestAndFinalizedActor::<Block, Backend>::new(backend.clone(), db.clone(), interval_ms)
-                .create(None)
-                .spawn_global();
+        let best_and_finalized = BestAndFinalizedActor::<Block, Backend>::new(
+            backend.clone(),
+            db.clone(),
+            config.interval_ms,
+        )
+        .create(None)
+        .spawn_global();
         log::info!(target: "actor", "Spawn BestAndFinalized Actor");
 
-        let mut blocks = Vec::with_capacity(max_block_load as usize);
-        assert!(max_block_load >= 1, "max_block_load must be >= 1");
-        for i in 0..max_block_load {
+        let mut blocks = Vec::with_capacity(config.max_block_load as usize);
+        assert!(config.max_block_load >= 1, "max_block_load must be >= 1");
+        for i in 0..config.max_block_load {
             blocks.push(
                 BlockActor::<Block, Backend, Api>::new(backend.clone(), api.clone())
                     .create(None)
@@ -77,34 +77,40 @@ where
             );
             log::info!(target: "actor", "Spawn Block[{}] Actor", i);
         }
+        let curr_block = config.start_block.unwrap_or_default();
 
         Self {
-            genesis,
             backend,
             api,
+
             db,
             metadata,
+
             best_and_finalized,
             blocks,
-            curr_block: 0,
+
+            genesis,
+            config,
+            curr_block,
             catchup_finalized: false,
-            max_block_load,
-            interval_ms,
         }
     }
 
     async fn initialize(&mut self) -> Result<(), ActorError> {
         let (_best_block, finalized_block) = self.best_and_finalized().await?;
         if let Some(max) = self.db.send(DbMaxBlock).await? {
-            self.curr_block = std::cmp::min(max, finalized_block);
-            // TODO: remove the blocks and storages (Block finalized_block ~ Block max) from db if max > finalized_block
-            log::info!(target: "actor", "Initialize from the Block #{}", self.curr_block);
+            if let Some(start_block) = self.config.start_block {
+                self.curr_block = cmp::min(cmp::min(max, finalized_block), start_block);
+            } else {
+                self.curr_block = cmp::min(max, finalized_block);
+            }
+            // TODO: remove the blocks and storages (Block #curr_block ~ Block #max) from db if max > curr_block
         } else {
-            // `None` means that the blocks table is not populated yet
-            log::info!(target: "actor", "Initialize from the Genesis Block");
+            // `None` means that the blocks table is empty yet
             let genesis_block = self.genesis_block()?;
             self.metadata.send(genesis_block).await?;
         }
+        log::info!(target: "actor", "Initialize from the Block #{}", self.curr_block);
         Ok(())
     }
 
@@ -146,7 +152,7 @@ where
 
     async fn tick(&mut self) -> Result<(), ActorError> {
         let (_best_block, finalized_block) = self.best_and_finalized().await?;
-        if self.curr_block + self.max_block_load <= finalized_block {
+        if self.curr_block + self.config.max_block_load <= finalized_block {
             // Haven't caught up with the latest finalized block
             self.tick_batch().await?;
         } else {
@@ -176,7 +182,7 @@ where
             self.metadata.send(block).await?;
             self.curr_block = next_block;
         } else {
-            tokio::time::sleep(Duration::from_millis(self.interval_ms)).await;
+            tokio::time::sleep(Duration::from_millis(self.config.interval_ms)).await;
         }
         Ok(())
     }
@@ -185,9 +191,9 @@ where
         // example:
         // curr_block = 0; max_block_load = 10  => (0+1..0+10] => (1..10]
         // curr_block = 10; max_block_load = 10 => (10+1..10+10] => (11..20]
-        let fut = ((self.curr_block + 1)..=(self.curr_block + self.max_block_load))
+        let fut = ((self.curr_block + 1)..=(self.curr_block + self.config.max_block_load))
             .map(|i| {
-                let index = (i % self.max_block_load) as usize;
+                let index = (i % self.config.max_block_load) as usize;
                 log::debug!(target: "actor", "Block[{}] Actor Crawling Block #{}", index, i);
                 self.blocks[index].send(CrawlBlock::new(i))
             })
@@ -198,7 +204,7 @@ where
             .map(|result| result.unwrap().unwrap()) // shouldn't be none or error
             .collect::<Vec<_>>();
         self.metadata.send(BatchBlockMessage::new(results)).await?;
-        self.curr_block += self.max_block_load;
+        self.curr_block += self.config.max_block_load;
         Ok(())
     }
 }

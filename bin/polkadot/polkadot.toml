@@ -27,10 +27,11 @@ wasm_exec_method = "Compiled" # or "Interpreted"
 default_heap_pages = 4096
 max_runtime_instances = 32
 
-##################################
-# Archive control configuration #
-##################################
-[control]
+###################################
+# Archive scheduler configuration #
+###################################
+[scheduler]
+#start_block = 0
 max_block_load = 100
 interval_ms = 1000
 

@@ -7,7 +7,7 @@ use sp_api::{ApiExt, BlockId, ConstructRuntimeApi, Core as CoreApi, Metadata as 
 use sp_blockchain::Backend as BlockchainBackend;
 use sp_runtime::traits::Block as BlockT;
 
-use archive_actor::{ActorConfig, Actors, DispatcherConfig};
+use archive_actor::{ActorConfig, Actors};
 use archive_client::{new_backend, new_client, ApiAccess, ArchiveBackend, ArchiveClient};
 use archive_postgres::migrate;
 
@@ -166,11 +166,8 @@ where
             ActorConfig {
                 genesis,
                 postgres: self.config.postgres,
-                dispatcher: self.config.dispatcher.map(|dispatcher| DispatcherConfig {
-                    kafka: dispatcher.kafka,
-                }),
-                max_block_load: self.config.control.max_block_load,
-                interval_ms: self.config.control.interval_ms,
+                dispatcher: self.config.dispatcher,
+                scheduler: self.config.scheduler,
             },
         )?;
         Ok(system)

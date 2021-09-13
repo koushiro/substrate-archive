@@ -6,6 +6,6 @@ mod message;
 
 pub use self::{
     actors::Actors,
-    config::{ActorConfig, DispatcherConfig, KafkaConfig, PostgresConfig},
+    config::{ActorConfig, DispatcherConfig, KafkaConfig, PostgresConfig, SchedulerConfig},
     error::ActorError,
 };

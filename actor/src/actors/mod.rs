@@ -72,13 +72,12 @@ where
         log::info!(target: "actor", "Spawn Metadata Actor");
 
         let scheduler = scheduler::Scheduler::<Block, Backend, Api>::new(
-            config.genesis,
             backend,
             api,
             db.clone(),
             metadata.clone(),
-            config.max_block_load,
-            config.interval_ms,
+            config.genesis,
+            config.scheduler,
         )
         .create(None)
         .spawn_global();
