@@ -46,7 +46,7 @@ impl<Block: BlockT> MetadataActor<Block> {
         block_num: <Block::Header as HeaderT>::Number,
         block_hash: Block::Hash,
     ) -> Result<(), ActorError> {
-        let is_exist = self.db.send(DbIfMetadataExist { spec_version }).await?;
+        let is_exist = self.db.send(DbIfMetadataExist { spec_version }).await??;
         if !is_exist {
             log::info!(
                 target: "actor",

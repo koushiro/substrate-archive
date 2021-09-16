@@ -316,7 +316,7 @@ impl InsertModel for BestBlockModel {
     async fn insert(self, conn: &mut PoolConnection<Postgres>) -> Result<u64, SqlxError> {
         log::info!(
             target: "postgres",
-            "Update best block, height = {}, hash = 0x{}",
+            "Update best block #{} (0x{})",
             self.block_num,
             hex::encode(&self.block_hash)
         );
@@ -348,7 +348,7 @@ impl InsertModel for FinalizedBlockModel {
     async fn insert(self, conn: &mut PoolConnection<Postgres>) -> Result<u64, SqlxError> {
         log::info!(
             target: "postgres",
-            "Update finalized block, height = {}, hash = 0x{}",
+            "Update finalized block #{} (0x{})",
             self.block_num,
             hex::encode(&self.block_hash)
         );

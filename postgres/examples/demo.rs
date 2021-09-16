@@ -5,7 +5,7 @@ async fn main() -> Result<(), SqlxError> {
     env_logger::init();
 
     let config = PostgresConfig {
-        uri: "postgres://koushiro:123@localhost:5432/polkadot-archive".to_string(),
+        uri: "postgres://koushiro:123@localhost:5432/polkadot-archive-dev".to_string(),
         min_connections: 1,
         max_connections: 2,
         connect_timeout: 30,
@@ -76,12 +76,14 @@ async fn main() -> Result<(), SqlxError> {
     let max_block_num = db.max_block_num().await?;
     log::info!("Max block num: {:?}", max_block_num);
 
-    let best_block_num = db.best_block_num().await?.unwrap();
-    let finalized_block_num = db.finalized_block_num().await?.unwrap();
+    let (best_block_num, best_block_hash) = db.best_block_num().await?.unwrap();
+    let (finalized_block_num, finalized_block_hash) = db.finalized_block_num().await?.unwrap();
     log::info!(
-        "Best block num: {}, Finalized block num: {}",
+        "Best block #{} (0x{}), Finalized block #{} (0x{})",
         best_block_num,
+        hex::encode(best_block_hash),
         finalized_block_num,
+        hex::encode(finalized_block_hash),
     );
 
     Ok(())

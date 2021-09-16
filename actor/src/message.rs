@@ -9,7 +9,7 @@ use sp_runtime::{
 use sp_state_machine::{ChildStorageCollection, StorageCollection};
 use sp_storage::{well_known_keys, StorageData, StorageKey};
 
-use crate::error::ActorError;
+use crate::error::{ActorError, SqlxError};
 
 // ============================================================================
 // `Data` Actor Message
@@ -338,39 +338,52 @@ impl<Block: BlockT> From<FinalizedBlockMessage<Block>>
 pub struct DbIfMetadataExist {
     pub spec_version: u32,
 }
-
 impl xtra::Message for DbIfMetadataExist {
-    type Result = bool;
+    type Result = Result<bool, SqlxError>;
 }
 
 #[derive(Copy, Clone, Debug)]
 pub struct DbMaxBlock;
 impl xtra::Message for DbMaxBlock {
-    type Result = Option<u32>;
+    type Result = Result<Option<u32>, SqlxError>;
 }
 
 #[derive(Copy, Clone, Debug)]
 pub struct DbBestBlock;
 impl xtra::Message for DbBestBlock {
-    type Result = Option<u32>;
+    type Result = Result<Option<(u32, Vec<u8>)>, SqlxError>;
 }
 
 #[derive(Copy, Clone, Debug)]
 pub struct DbFinalizedBlock;
 impl xtra::Message for DbFinalizedBlock {
-    type Result = Option<u32>;
+    type Result = Result<Option<(u32, Vec<u8>)>, SqlxError>;
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct BestAndFinalized;
-impl xtra::Message for BestAndFinalized {
-    type Result = (u32, u32);
+pub struct DbDeleteGtBlockNum {
+    pub block_num: u32,
+}
+impl DbDeleteGtBlockNum {
+    pub fn new(block_num: u32) -> Self {
+        Self { block_num }
+    }
+}
+impl xtra::Message for DbDeleteGtBlockNum {
+    type Result = Result<u64, SqlxError>;
 }
 
 #[derive(Copy, Clone, Debug)]
 pub struct CatchupFinalized;
 impl xtra::Message for CatchupFinalized {
     type Result = ();
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct BestAndFinalized;
+impl xtra::Message for BestAndFinalized {
+    // best_block_num, finalized_block_num
+    type Result = (u32, u32);
 }
 
 // ============================================================================

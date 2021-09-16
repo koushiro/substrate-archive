@@ -1,5 +1,6 @@
 #[allow(unused)]
 mod batch;
+mod delete;
 mod insert;
 pub mod query;
 
@@ -12,8 +13,10 @@ use sqlx::{
     ConnectOptions,
 };
 
+use self::delete::DeleteModel;
 use self::insert::InsertModel;
 use crate::config::PostgresConfig;
+use crate::model::{BlockModel, MainStorageChangeModel, MetadataModel};
 
 #[derive(Clone)]
 pub struct PostgresDb {
@@ -60,6 +63,15 @@ impl PostgresDb {
         Ok(rows_affected)
     }
 
+    /// Delete models where block_num > `block_num`
+    pub async fn delete(&self, block_num: u32) -> Result<u64, SqlxError> {
+        let mut conn = self.conn().await?;
+        let rows1 = MainStorageChangeModel::delete(&mut conn, block_num).await?;
+        let rows2 = BlockModel::delete(&mut conn, block_num).await?;
+        let rows3 = MetadataModel::delete(&mut conn, block_num).await?;
+        Ok(rows1 + rows2 + rows3)
+    }
+
     pub async fn if_metadata_exists(&self, spec_version: u32) -> Result<bool, SqlxError> {
         let mut conn = self.conn().await?;
         let does_exist = query::check_if_metadata_exists(spec_version, &mut conn).await?;
@@ -72,13 +84,13 @@ impl PostgresDb {
         Ok(max)
     }
 
-    pub async fn best_block_num(&self) -> Result<Option<u32>, SqlxError> {
+    pub async fn best_block_num(&self) -> Result<Option<(u32, Vec<u8>)>, SqlxError> {
         let mut conn = self.conn().await?;
         let best_block = query::best_block_num(&mut conn).await?;
         Ok(best_block)
     }
 
-    pub async fn finalized_block_num(&self) -> Result<Option<u32>, SqlxError> {
+    pub async fn finalized_block_num(&self) -> Result<Option<(u32, Vec<u8>)>, SqlxError> {
         let mut conn = self.conn().await?;
         let finalized_block = query::finalized_block_num(&mut conn).await?;
         Ok(finalized_block)

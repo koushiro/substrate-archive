@@ -1,7 +1,7 @@
 mod best_finalized;
 mod block;
 
-use std::{cmp, sync::Arc, time::Duration};
+use std::{cmp, collections::BTreeMap, sync::Arc, time::Duration};
 
 use xtra::{prelude::*, spawn::TokioGlobalSpawnExt};
 
@@ -10,7 +10,11 @@ use sc_client_api::{
     client::BlockBackend,
 };
 use sp_api::{ApiExt, BlockId, Core as CoreApi, ProvideRuntimeApi};
-use sp_runtime::traits::{Block as BlockT, NumberFor};
+use sp_blockchain::HeaderBackend;
+use sp_runtime::{
+    generic::SignedBlock,
+    traits::{Block as BlockT, Header as HeaderT, NumberFor},
+};
 use sp_storage::Storage;
 
 use self::{best_finalized::BestAndFinalizedActor, block::BlockActor};
@@ -40,6 +44,16 @@ where
     config: SchedulerConfig,
     curr_block: u32,
     catchup_finalized: bool,
+
+    // curr_finalized_block                   curr_block
+    //    |                                       |
+    // +--+--+    +-----+    +-----+           +--+--+
+    // |     |◄---+     |◄---+     |◄---...◄---+     |
+    // +--+--+    +--+--+    +-----+           +--+--+
+    //    |                                       |
+    //    +---------------------------------------+
+    //                    queue
+    queue: BTreeMap<u32, Block::Header>,
 }
 
 impl<Block, Backend, Api> Scheduler<Block, Backend, Api>
@@ -93,24 +107,45 @@ where
             config,
             curr_block,
             catchup_finalized: false,
+
+            queue: Default::default(),
         }
     }
 
+    // curr_block(curr_finalized_block)
+    //    |
+    // +--+--+
+    // |     |◄---  queue: [curr_finalized_block]
+    // +-----+
     async fn initialize(&mut self) -> Result<(), ActorError> {
         let (_best_block, finalized_block) = self.best_and_finalized().await?;
-        if let Some(max) = self.db.send(DbMaxBlock).await? {
+        if let Some(max) = self.db.send(DbMaxBlock).await?? {
             if let Some(start_block) = self.config.start_block {
-                self.curr_block = cmp::min(cmp::min(max, finalized_block), start_block);
+                self.curr_block = cmp::min(finalized_block, start_block);
             } else {
                 self.curr_block = cmp::min(max, finalized_block);
             }
-            // TODO: remove the blocks and storages (Block #curr_block ~ Block #max) from db if max > curr_block
+            // delete the metadatas, blocks and storages (block_num > curr_block) from db
+            let _ = self
+                .db
+                .send(DbDeleteGtBlockNum::new(self.curr_block))
+                .await??;
         } else {
             // `None` means that the blocks table is empty yet
             let genesis_block = self.genesis_block()?;
             self.metadata.send(genesis_block).await?;
         }
-        log::info!(target: "actor", "Initialize from the Block #{}", self.curr_block);
+
+        // initialized block must exist
+        let curr_finalized_block = self
+            .header(self.curr_block)?
+            .expect("initialized block must exist");
+        self.queue.insert(self.curr_block, curr_finalized_block);
+        log::info!(
+            target: "actor",
+            "Initialize scheduler from the Finalized Block #{}",
+            self.curr_block
+        );
         Ok(())
     }
 
@@ -124,10 +159,7 @@ where
     {
         let id = BlockId::Number(0u32.into());
         let runtime_version = self.api.runtime_api().version(&id)?;
-        let block = self
-            .backend
-            .block(&id)?
-            .expect("genesis block must exist; qed");
+        let block = self.block(&id)?.expect("genesis block must exist; qed");
         let genesis = self.genesis.clone();
         Ok(BlockMessage {
             spec_version: runtime_version.spec_version,
@@ -150,14 +182,66 @@ where
         })
     }
 
+    fn block(&self, id: &BlockId<Block>) -> Result<Option<SignedBlock<Block>>, ActorError> {
+        Ok(self.backend.block(&id)?)
+    }
+
+    fn header(&self, block_num: u32) -> Result<Option<Block::Header>, ActorError> {
+        Ok(self.backend.blockchain().header(BlockId::Number(
+            <Block::Header as HeaderT>::Number::from(block_num),
+        ))?)
+    }
+
+    fn curr_finalized_block_num(&self) -> u32 {
+        self.queue
+            .keys()
+            .min()
+            .map(|h| *h)
+            .expect("At least one finalized block exist")
+    }
+
+    fn queue_back_block_hash(&self) -> Block::Hash {
+        let max = self
+            .queue
+            .keys()
+            .max()
+            .map(|h| *h)
+            .expect("At least one finalized block exist");
+        self.queue
+            .get(&max)
+            .expect("At least one finalized block exist")
+            .hash()
+    }
+
+    // main logic
     async fn tick(&mut self) -> Result<(), ActorError> {
         let (_best_block, finalized_block) = self.best_and_finalized().await?;
+
+        // update the current finalized block
+        if self.curr_finalized_block_num() != finalized_block {
+            // finalized block must exist
+            let header = self
+                .header(finalized_block)?
+                .expect("finalized block must exist");
+            self.queue.insert(finalized_block, header);
+            // remove the finalized blocks (remain one finalized block on the front) from the queue.
+            self.queue.retain(|h, _| *h >= finalized_block);
+        }
+
         if self.curr_block + self.config.max_block_load <= finalized_block {
             // Haven't caught up with the latest finalized block
             self.tick_batch().await?;
         } else {
-            // It's about to catch up with the latest finalized block
-            self.tick_one().await?;
+            if self.curr_block < finalized_block {
+                // It's about to catch up with the latest finalized block
+                // next_block (self.curr_block + 1) <= finalized_block
+                let next_block = self.curr_block + 1;
+                log::debug!(target: "actor", "BlockActor[0] Crawling Block #{}", next_block);
+                self.tick_one_about_to_catch_up(next_block).await?;
+            } else {
+                // Has caught up with the latest finalized block
+                self.tick_one_has_caught_up().await?;
+            }
         }
 
         // start to dispatch finalized block
@@ -173,20 +257,14 @@ where
         Ok(())
     }
 
-    async fn tick_one(&mut self) -> Result<(), ActorError> {
-        let next_block = self.curr_block + 1;
-        let block = self.blocks.first().expect("At least one block actor");
-        log::debug!(target: "actor", "Block[0] Actor Crawling Block #{}", next_block);
-        // TODO: check the forked block
-        if let Some(block) = block.send(CrawlBlock::new(next_block)).await? {
-            self.metadata.send(block).await?;
-            self.curr_block = next_block;
-        } else {
-            tokio::time::sleep(Duration::from_millis(self.config.interval_ms)).await;
-        }
-        Ok(())
-    }
-
+    // Haven't caught up with the latest finalized block
+    //
+    // curr_block                       curr_finalized_block
+    //    |                                       |
+    // +--+--+    +-----+    +-----+           +--+--+
+    // |     |◄---+     |◄---+     |◄---...◄---+     |    queue: [curr_finalized_block]
+    // +--+--+    +--+--+    +-----+           +--+--+
+    //    |-------- >= max_block_load ------------|
     async fn tick_batch(&mut self) -> Result<(), ActorError> {
         // example:
         // curr_block = 0; max_block_load = 10  => (0+1..0+10] => (1..10]
@@ -194,7 +272,7 @@ where
         let fut = ((self.curr_block + 1)..=(self.curr_block + self.config.max_block_load))
             .map(|i| {
                 let index = (i % self.config.max_block_load) as usize;
-                log::debug!(target: "actor", "Block[{}] Actor Crawling Block #{}", index, i);
+                log::debug!(target: "actor", "BlockActor[{}] Crawling Block #{}", index, i);
                 self.blocks[index].send(CrawlBlock::new(i))
             })
             .collect::<Vec<_>>();
@@ -206,6 +284,82 @@ where
         self.metadata.send(BatchBlockMessage::new(results)).await?;
         self.curr_block += self.config.max_block_load;
         Ok(())
+    }
+
+    // It's about to catch up with the latest finalized block (curr_block < finalized_block)
+    //
+    // curr_block                       curr_finalized_block
+    //    |                                       |
+    // +--+--+    +-----+    +-----+           +--+--+
+    // |     |◄---+     |◄---+     |◄---...◄---+     |    queue: [curr_finalized_block]
+    // +-----+    +--+--+    +-----+           +--+--+
+    //    |-------- < max_block_load ------------|
+    async fn tick_one_about_to_catch_up(&mut self, next_block: u32) -> Result<(), ActorError> {
+        let block = self
+            .crawl_next_block(next_block)
+            .await?
+            .expect("finalized block must exist");
+        self.metadata.send(block).await?;
+        self.curr_block = next_block;
+        Ok(())
+    }
+
+    // Has caught up with the latest finalized block
+    //
+    // curr_finalized_block                   curr_block
+    //    |                                       |
+    // +--+--+    +-----+    +-----+           +--+--+
+    // |     |◄---+     |◄---+     |◄---...◄---+     |
+    // +--+--+    +--+--+    +-----+           +--+--+
+    //    |                                       |
+    //    +---------------------------------------+
+    //                     queue
+    async fn tick_one_has_caught_up(&mut self) -> Result<(), ActorError> {
+        loop {
+            // self.curr_block >= finalized_block, next_block (self.curr_block + 1) > finalized_block
+            // so next block is not finalized block.
+            let next_block = self.curr_block + 1;
+            log::debug!(target: "actor", "BlockActor[0] Crawling Block #{}", next_block);
+
+            if let Some(block) = self.crawl_next_block(next_block).await? {
+                let next_header = block.inner.block.header();
+                if next_header.parent_hash() != &self.queue_back_block_hash() {
+                    // the block is forked
+                    let curr_block = self.curr_block;
+                    let curr_finalized_block = self.curr_finalized_block_num();
+                    self.queue
+                        .retain(|h, _| *h < curr_block && *h >= curr_finalized_block);
+                    self.curr_block -= 1;
+                    log::info!(
+                        target: "actor",
+                        "♻️  Rollback to Block #{}, Finalized Block #{}",
+                        self.curr_block,
+                        curr_finalized_block
+                    );
+                    self.db
+                        .send(DbDeleteGtBlockNum::new(self.curr_block))
+                        .await??;
+                } else {
+                    // the block is valid
+                    self.metadata.send(block.clone()).await?;
+                    self.queue.insert(next_block, next_header.clone());
+                    self.curr_block = next_block;
+                    break;
+                }
+            } else {
+                tokio::time::sleep(Duration::from_millis(self.config.interval_ms)).await;
+                break;
+            }
+        }
+        Ok(())
+    }
+
+    async fn crawl_next_block(
+        &self,
+        block_num: u32,
+    ) -> Result<Option<BlockMessage<Block>>, ActorError> {
+        let actor = self.blocks.first().expect("At least one block actor");
+        Ok(actor.send(CrawlBlock::new(block_num)).await?)
     }
 }
 

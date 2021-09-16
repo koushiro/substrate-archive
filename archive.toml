@@ -39,7 +39,7 @@ interval_ms = 1000
 # Archive postgres configuration #
 ##################################
 [postgres]
-uri = "postgres://koushiro:123@localhost:5432/polkadot-archive"
+uri = "postgres://koushiro:123@localhost:5432/polkadot-archive-dev"
 min_connections = 2
 max_connections = 8
 connect_timeout = 10
@@ -48,12 +48,12 @@ disable_statement_logging = false
 ####################################
 # Archive dispatcher configuration #
 ####################################
-[dispatcher.kafka]
-queue_timeout = 0
-[dispatcher.kafka.topic]
-metadata = "polkadot-metadata"
-block = "polkadot-block"
-finalized_block = "polkadot-finalized-block"
+#[dispatcher.kafka]
+#queue_timeout = 0
+#[dispatcher.kafka.topic]
+#metadata = "polkadot-metadata"
+#block = "polkadot-block"
+#finalized_block = "polkadot-finalized-block"
 ## https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
 ##
 ## https://stackoverflow.com/questions/59322133/kafka-broker-message-size-too-large
@@ -66,7 +66,7 @@ finalized_block = "polkadot-finalized-block"
 ## Consumer:
 ##   `max.partition.fetch.bytes`: default 1048576 (1 MiB)
 ##   `fetch.max.bytes`: default 57671680 (55 MiB)
-[dispatcher.kafka.rdkafka]
-"metadata.broker.list" = "localhost:9092" # or "bootstrap.servers" = "localhost:9092"
-"compression.codec" = "none" # "none" | "gzip" | "snappy" | "lz4" | "zstd"
-"message.max.bytes" = "134217728" # 128 MB
+#[dispatcher.kafka.rdkafka]
+#"metadata.broker.list" = "localhost:9092" # or "bootstrap.servers" = "localhost:9092"
+#"compression.codec" = "none" # "none" | "gzip" | "snappy" | "lz4" | "zstd"
+#"message.max.bytes" = "134217728" # 128 MB

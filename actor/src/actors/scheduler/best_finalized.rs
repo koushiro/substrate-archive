@@ -20,8 +20,8 @@ pub struct BestAndFinalizedActor<Block: BlockT, Backend> {
     backend: Arc<Backend>,
     db: Address<PostgresActor<Block>>,
     interval_ms: u64,
-    best_block: u32,
-    finalized_block: u32,
+    best_block_num: u32,
+    finalized_block_num: u32,
 }
 
 impl<Block, Backend> BestAndFinalizedActor<Block, Backend>
@@ -34,15 +34,26 @@ where
             backend,
             db,
             interval_ms,
-            best_block: 0,
-            finalized_block: 0,
+            best_block_num: 0,
+            finalized_block_num: 0,
         }
     }
 
     async fn initialize(&mut self) -> Result<(), ActorError> {
-        self.best_block = self.db.send(DbBestBlock).await?.unwrap_or_default();
-        self.finalized_block = self.db.send(DbFinalizedBlock).await?.unwrap_or_default();
-        log::info!(target: "actor", "Initialized BestAndFinalized Actor. Best Block #{}, Finalized Block #{}", self.best_block, self.finalized_block);
+        let (best_block, best_block_hash) = self.db.send(DbBestBlock).await??.unwrap_or_default();
+        self.best_block_num = best_block;
+
+        let (finalized_block, finalized_block_hash) =
+            self.db.send(DbFinalizedBlock).await??.unwrap_or_default();
+        self.finalized_block_num = finalized_block;
+
+        log::info!(
+            target: "actor",
+            "Initialized BestAndFinalized Actor. \
+            Best Block #{} (0x{}), Finalized Block #{} (0x{})",
+            self.best_block_num, hex::encode(best_block_hash),
+            self.finalized_block_num, hex::encode(finalized_block_hash)
+        );
         Ok(())
     }
 
@@ -54,10 +65,10 @@ where
             info.finalized_number,
             info.finalized_hash,
         );
-        if best_number.saturated_into::<u32>() > self.best_block {
+        if best_number.saturated_into::<u32>() > self.best_block_num {
             log::info!(
                 target: "actor",
-                "Crawl Best Block #{}, hash = {:?}",
+                "Crawl Best Block #{} ({:?})",
                 best_number, best_hash,
             );
             self.db
@@ -66,12 +77,12 @@ where
                     block_hash: best_hash,
                 })
                 .await?;
-            self.best_block = best_number.saturated_into::<u32>();
+            self.best_block_num = best_number.saturated_into::<u32>();
         }
-        if finalized_number.saturated_into::<u32>() > self.finalized_block {
+        if finalized_number.saturated_into::<u32>() > self.finalized_block_num {
             log::info!(
                 target: "actor",
-                "Crawl Finalized Block #{}, hash = {:?}",
+                "Crawl Finalized Block #{} ({:?})",
                 finalized_number, finalized_hash,
             );
             self.db
@@ -81,7 +92,7 @@ where
                     timestamp: Utc::now().timestamp_millis(),
                 })
                 .await?;
-            self.finalized_block = finalized_number.saturated_into::<u32>();
+            self.finalized_block_num = finalized_number.saturated_into::<u32>();
         }
         Ok(())
     }
@@ -141,7 +152,7 @@ where
         _: BestAndFinalized,
         _: &mut Context<Self>,
     ) -> <BestAndFinalized as Message>::Result {
-        (self.best_block, self.finalized_block)
+        (self.best_block_num, self.finalized_block_num)
     }
 }
 

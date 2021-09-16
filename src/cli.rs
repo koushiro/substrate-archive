@@ -25,6 +25,7 @@ pub struct ArchiveCli {
     config: PathBuf,
 
     /// Specifies the start block number of archive.
+    /// NOTE: you need to know what you are doing!!!
     #[structopt(long, name = "NUM")]
     start_block: Option<u32>,
 }

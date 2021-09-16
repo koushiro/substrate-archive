@@ -11,8 +11,8 @@ use crate::{
     error::ActorError,
     message::{
         BatchBlockMessage, BestBlockMessage, BlockMessage, CatchupFinalized, DbBestBlock,
-        DbFinalizedBlock, DbIfMetadataExist, DbMaxBlock, Die, FinalizedBlockMessage,
-        MetadataMessage,
+        DbDeleteGtBlockNum, DbFinalizedBlock, DbIfMetadataExist, DbMaxBlock, Die,
+        FinalizedBlockMessage, MetadataMessage,
     },
 };
 
@@ -202,13 +202,7 @@ impl<Block: BlockT> Handler<DbIfMetadataExist> for PostgresActor<Block> {
         message: DbIfMetadataExist,
         _ctx: &mut Context<Self>,
     ) -> <DbIfMetadataExist as Message>::Result {
-        match self.db.if_metadata_exists(message.spec_version).await {
-            Ok(does_exist) => does_exist,
-            Err(err) => {
-                log::error!(target: "actor", "{}", err);
-                false
-            }
-        }
+        self.db.if_metadata_exists(message.spec_version).await
     }
 }
 
@@ -219,13 +213,7 @@ impl<Block: BlockT> Handler<DbMaxBlock> for PostgresActor<Block> {
         _: DbMaxBlock,
         _: &mut Context<Self>,
     ) -> <DbMaxBlock as Message>::Result {
-        match self.db.max_block_num().await {
-            Ok(num) => num,
-            Err(err) => {
-                log::error!(target: "actor", "{}", err);
-                None
-            }
-        }
+        self.db.max_block_num().await
     }
 }
 
@@ -236,13 +224,7 @@ impl<Block: BlockT> Handler<DbBestBlock> for PostgresActor<Block> {
         _: DbBestBlock,
         _: &mut Context<Self>,
     ) -> <DbBestBlock as Message>::Result {
-        match self.db.best_block_num().await {
-            Ok(num) => num,
-            Err(err) => {
-                log::error!(target: "actor", "{}", err);
-                None
-            }
-        }
+        self.db.best_block_num().await
     }
 }
 
@@ -253,13 +235,18 @@ impl<Block: BlockT> Handler<DbFinalizedBlock> for PostgresActor<Block> {
         _: DbFinalizedBlock,
         _: &mut Context<Self>,
     ) -> <DbFinalizedBlock as Message>::Result {
-        match self.db.finalized_block_num().await {
-            Ok(num) => num,
-            Err(err) => {
-                log::error!(target: "actor", "{}", err);
-                None
-            }
-        }
+        self.db.finalized_block_num().await
+    }
+}
+
+#[async_trait::async_trait]
+impl<Block: BlockT> Handler<DbDeleteGtBlockNum> for PostgresActor<Block> {
+    async fn handle(
+        &mut self,
+        message: DbDeleteGtBlockNum,
+        _: &mut Context<Self>,
+    ) -> <DbDeleteGtBlockNum as Message>::Result {
+        self.db.delete(message.block_num).await
     }
 }
 

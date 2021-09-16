@@ -1,3 +1,5 @@
+pub use archive_kafka::KafkaError;
+pub use archive_postgres::SqlxError;
 pub use sp_blockchain::Error as BlockchainError;
 
 #[derive(Debug, thiserror::Error)]

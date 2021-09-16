@@ -59,21 +59,25 @@ pub async fn max_block_num(conn: &mut PoolConnection<Postgres>) -> Result<Option
 #[derive(Clone, Debug, Eq, PartialEq, FromRow)]
 struct BlockForQuery {
     block_num: i32,
+    block_hash: Vec<u8>,
 }
 
-pub async fn best_block_num(conn: &mut PoolConnection<Postgres>) -> Result<Option<u32>, SqlxError> {
-    let best_block: Option<BlockForQuery> = sqlx::query_as(r#"SELECT block_num FROM best_block"#)
-        .fetch_optional(conn)
-        .await?;
-    Ok(best_block.map(|block| block.block_num as u32))
+pub async fn best_block_num(
+    conn: &mut PoolConnection<Postgres>,
+) -> Result<Option<(u32, Vec<u8>)>, SqlxError> {
+    let best_block: Option<BlockForQuery> =
+        sqlx::query_as(r#"SELECT block_num, block_hash FROM best_block"#)
+            .fetch_optional(conn)
+            .await?;
+    Ok(best_block.map(|block| (block.block_num as u32, block.block_hash)))
 }
 
 pub async fn finalized_block_num(
     conn: &mut PoolConnection<Postgres>,
-) -> Result<Option<u32>, SqlxError> {
+) -> Result<Option<(u32, Vec<u8>)>, SqlxError> {
     let best_block: Option<BlockForQuery> =
-        sqlx::query_as(r#"SELECT block_num FROM finalized_block"#)
+        sqlx::query_as(r#"SELECT block_num, block_hash FROM finalized_block"#)
             .fetch_optional(conn)
             .await?;
-    Ok(best_block.map(|block| block.block_num as u32))
+    Ok(best_block.map(|block| (block.block_num as u32, block.block_hash)))
 }
