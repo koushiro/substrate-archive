@@ -11,6 +11,7 @@ use sp_runtime::{
 use sp_storage::{StorageData, StorageKey};
 
 #[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MetadataPayload<Block: BlockT> {
     pub spec_version: u32,
     pub block_num: <Block::Header as HeaderT>::Number,
@@ -19,6 +20,7 @@ pub struct MetadataPayload<Block: BlockT> {
 }
 
 #[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BlockPayload<Block: BlockT> {
     pub spec_version: u32,
     pub block_num: <Block::Header as HeaderT>::Number,
@@ -46,12 +48,14 @@ where
 }
 
 #[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BestBlockPayload<Block: BlockT> {
     pub block_num: <Block::Header as HeaderT>::Number,
     pub block_hash: <Block::Header as HeaderT>::Hash,
 }
 
 #[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FinalizedBlockPayload<Block: BlockT> {
     pub block_num: <Block::Header as HeaderT>::Number,
     pub block_hash: <Block::Header as HeaderT>::Hash,
@@ -60,6 +64,7 @@ pub struct FinalizedBlockPayload<Block: BlockT> {
 
 // only for example `demo`
 #[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MetadataPayloadForDemo {
     pub spec_version: u32,
     pub block_num: u32,
@@ -69,6 +74,7 @@ pub struct MetadataPayloadForDemo {
 
 // only for example `demo`
 #[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BlockPayloadForDemo {
     pub spec_version: u32,
     pub block_num: u32,
@@ -86,12 +92,14 @@ pub struct BlockPayloadForDemo {
 }
 
 #[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BestBlockPayloadDemo {
     pub block_num: u32,
     pub block_hash: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FinalizedBlockPayloadDemo {
     pub block_num: u32,
     pub block_hash: String,
