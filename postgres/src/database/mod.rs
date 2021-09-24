@@ -13,10 +13,11 @@ use sqlx::{
     ConnectOptions,
 };
 
-use self::delete::DeleteModel;
-use self::insert::InsertModel;
-use crate::config::PostgresConfig;
-use crate::model::{BlockModel, MainStorageChangeModel, MetadataModel};
+use self::{delete::DeleteModel, insert::InsertModel};
+use crate::{
+    config::PostgresConfig,
+    model::{BlockModel, MainStorageChangeModel, MetadataModel},
+};
 
 #[derive(Clone)]
 pub struct PostgresDb {

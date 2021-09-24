@@ -9,10 +9,13 @@ use sp_database::{ColumnId, Database as DatabaseT, Transaction};
 
 use crate::{columns, utils::NUM_COLUMNS};
 
+type DatabaseResult<T> = sp_database::error::Result<T>;
+
 /// Secondary rocksdb configuration.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RocksDbConfig {
     pub path: PathBuf,
+    pub max_open_files: i32,
     pub cache_size: usize,
     pub secondary_db_path: PathBuf,
 }
@@ -31,11 +34,12 @@ impl SecondaryRocksDb {
         let secondary_db_path = config
             .secondary_db_path
             .to_str()
-            .expect("Cannot create secondary rocksdb db");
+            .expect("Must specify the secondary db path");
         let cache_size = config.cache_size;
 
         let mut db_config = DatabaseConfig::with_columns(NUM_COLUMNS);
         db_config.secondary = Some(secondary_db_path.to_string());
+        db_config.max_open_files = config.max_open_files;
 
         let mut memory_budget = HashMap::new();
         // Full node database.
@@ -86,7 +90,6 @@ impl SecondaryRocksDb {
     }
 }
 
-type DatabaseResult<T> = sp_database::error::Result<T>;
 impl DatabaseT<DbHash> for SecondaryRocksDb {
     fn commit(&self, _transaction: Transaction<DbHash>) -> DatabaseResult<()> {
         panic!("Read-only database don't support commit transaction")
