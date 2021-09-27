@@ -2,4 +2,5 @@
 
 ulimit -n 100000
 export RUST_BACKTRACE=full
-nohup ./target/release/polkadot-archive -c ./archive.toml > polkadot-archive.log 2>&1 &
+cp target/release/polkadot-archive polkadot-archive-dev
+nohup ./polkadot-archive-dev -c ./archive.toml > polkadot-archive.log 2>&1 &

@@ -313,7 +313,7 @@ where
     // +--+--+    +--+--+    +-----+           +--+--+
     //    |                                       |
     //    +---------------------------------------+
-    //                     queue
+    //               queue (length >= 1)
     async fn tick_one_has_caught_up(&mut self) -> Result<(), ActorError> {
         loop {
             // self.curr_block >= finalized_block, next_block (self.curr_block + 1) > finalized_block
@@ -327,14 +327,32 @@ where
                     // the block is forked
                     let curr_block = self.curr_block;
                     let curr_finalized_block = self.curr_finalized_block_num();
-                    self.queue
-                        .retain(|h, _| *h < curr_block && *h >= curr_finalized_block);
-                    self.curr_block -= 1;
+
+                    if curr_block > curr_finalized_block {
+                        self.queue
+                            .retain(|h, _| *h < curr_block && *h >= curr_finalized_block);
+                        self.curr_block -= 1;
+                    } else {
+                        // fix issue https://github.com/patractlabs/archive/issues/62
+
+                        // curr_block <= curr_finalized_block
+                        // re-construct queue
+                        let finalized_block = self
+                            .crawl_next_block(curr_finalized_block)
+                            .await?
+                            .expect("finalized block must exist");
+                        let finalized_header = finalized_block.inner.block.header();
+                        self.queue.clear();
+                        self.queue
+                            .insert(curr_finalized_block, finalized_header.clone());
+                        // reset the curr_block
+                        self.curr_block = curr_finalized_block;
+                    }
+
                     log::info!(
                         target: "actor",
                         "♻️  Rollback to Block #{}, Finalized Block #{}",
-                        self.curr_block,
-                        curr_finalized_block
+                        self.curr_block, curr_finalized_block
                     );
                     self.db
                         .send(DbDeleteGtBlockNum::new(self.curr_block))
