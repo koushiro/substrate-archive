@@ -2,3 +2,4 @@
 /.idea
 **/*.log
 **/rocksdb_secondary
+**/*/node_modules
