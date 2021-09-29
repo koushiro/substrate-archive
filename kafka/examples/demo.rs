@@ -11,9 +11,9 @@ async fn main() -> Result<(), KafkaError> {
     let config = KafkaConfig {
         queue_timeout: 0,
         topic: KafkaTopicConfig {
-            metadata: "polkadot-metadata".into(),
-            block: "polkadot-block".into(),
-            finalized_block: "polkadot-finalized-block".into(),
+            metadata: "polkadot-metadata-dev".into(),
+            block: "polkadot-block-dev".into(),
+            finalized_block: "polkadot-finalized-block-dev".into(),
         },
         rdkafka: {
             let mut rdkakfa = HashMap::new();
@@ -26,17 +26,17 @@ async fn main() -> Result<(), KafkaError> {
     let producer = KafkaProducer::new(config)?;
 
     let metadata = MetadataPayloadForDemo {
-        spec_version: 0,
+        version: 0,
         block_num: 0,
         block_hash: "0x00".into(),
-        meta: vec![1, 2, 3, 4, 5].into(),
+        metadata: vec![1, 2, 3, 4, 5].into(),
     };
     producer.send(metadata).await?;
 
-    for i in 0..950 {
+    for i in 0..u8::MAX {
         let block = BlockPayloadForDemo {
-            spec_version: 0,
-            block_num: i,
+            version: 0,
+            block_num: i as u32,
             block_hash: "0x00".into(),
             parent_hash: "0x00".into(),
             state_root: "0x00".into(),
@@ -47,8 +47,8 @@ async fn main() -> Result<(), KafkaError> {
             main_changes: {
                 let mut main_changes = HashMap::new();
                 main_changes.insert(
-                    StorageKey(vec![(i % u32::from(u8::MAX)) as u8]),
-                    Some(StorageData(vec![(i % u32::from(u8::MAX)) as u8])),
+                    StorageKey(vec![(i % u8::MAX) as u8]),
+                    Some(StorageData(vec![(i % u8::MAX) as u8])),
                 );
                 main_changes
             },
@@ -57,7 +57,7 @@ async fn main() -> Result<(), KafkaError> {
         producer.send(block).await?;
 
         let finalized_block = FinalizedBlockPayloadDemo {
-            block_num: i,
+            block_num: i as u32,
             block_hash: "0x00".into(),
             timestamp: chrono::Utc::now().timestamp_millis(),
         };

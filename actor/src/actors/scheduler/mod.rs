@@ -112,6 +112,13 @@ where
         }
     }
 
+    fn log_queue(&self) -> String {
+        self.queue
+            .iter()
+            .map(|(h, header)| format!("[{}({})] <= ", h, header.hash()))
+            .collect()
+    }
+
     // curr_block(curr_finalized_block)
     //    |
     // +--+--+
@@ -143,8 +150,8 @@ where
         self.queue.insert(self.curr_block, curr_finalized_block);
         log::info!(
             target: "actor",
-            "Initialize scheduler from the Finalized Block #{}",
-            self.curr_block
+            "Initialize scheduler from the Finalized Block #{}, Queue: {}",
+            self.curr_block, self.log_queue()
         );
         Ok(())
     }
@@ -162,7 +169,7 @@ where
         let block = self.block(&id)?.expect("genesis block must exist; qed");
         let genesis = self.genesis.clone();
         Ok(BlockMessage {
-            spec_version: runtime_version.spec_version,
+            version: runtime_version.spec_version,
             inner: block,
             main_changes: genesis.top.into_iter().map(|(k, v)| (k, Some(v))).collect(),
             child_changes: genesis
@@ -223,9 +230,14 @@ where
             let header = self
                 .header(finalized_block)?
                 .expect("finalized block must exist");
+            log::debug!(target: "actor", "Before update current finalized block, Queue: {}", self.log_queue());
             self.queue.insert(finalized_block, header);
             // remove the finalized blocks (remain one finalized block on the front) from the queue.
             self.queue.retain(|h, _| *h >= finalized_block);
+            log::debug!(
+                target: "actor", "After update current finalized block #{}, Queue: {}",
+                finalized_block, self.log_queue()
+            );
         }
 
         if self.curr_block + self.config.max_block_load <= finalized_block {
@@ -234,10 +246,7 @@ where
         } else {
             if self.curr_block < finalized_block {
                 // It's about to catch up with the latest finalized block
-                // next_block (self.curr_block + 1) <= finalized_block
-                let next_block = self.curr_block + 1;
-                log::debug!(target: "actor", "BlockActor[0] Crawling Block #{}", next_block);
-                self.tick_one_about_to_catch_up(next_block).await?;
+                self.tick_one_about_to_catch_up().await?;
             } else {
                 // Has caught up with the latest finalized block
                 self.tick_one_has_caught_up().await?;
@@ -294,7 +303,11 @@ where
     // |     |◄---+     |◄---+     |◄---...◄---+     |    queue: [curr_finalized_block]
     // +-----+    +--+--+    +-----+           +--+--+
     //    |-------- < max_block_load ------------|
-    async fn tick_one_about_to_catch_up(&mut self, next_block: u32) -> Result<(), ActorError> {
+    async fn tick_one_about_to_catch_up(&mut self) -> Result<(), ActorError> {
+        // self.curr_block < finalized_block
+        // next_block (self.curr_block + 1) <= finalized_block
+        let next_block = self.curr_block + 1;
+        log::debug!(target: "actor", "BlockActor[0] Crawling Block #{}", next_block);
         let block = self
             .crawl_next_block(next_block)
             .await?
@@ -351,8 +364,8 @@ where
 
                     log::info!(
                         target: "actor",
-                        "♻️  Rollback to Block #{}, Finalized Block #{}",
-                        self.curr_block, curr_finalized_block
+                        "♻️  Rollback to Block #{}, Finalized Block #{}, Queue: {}",
+                        self.curr_block, curr_finalized_block, self.log_queue(),
                     );
                     self.db
                         .send(DbDeleteGtBlockNum::new(self.curr_block))
@@ -362,6 +375,7 @@ where
                     self.metadata.send(block.clone()).await?;
                     self.queue.insert(next_block, next_header.clone());
                     self.curr_block = next_block;
+                    log::info!(target: "actor", "Block Queue: {}", self.log_queue());
                     break;
                 }
             } else {

@@ -5,7 +5,7 @@ async fn main() -> Result<(), SqlxError> {
     env_logger::init();
 
     let config = PostgresConfig {
-        uri: "postgres://koushiro:123@localhost:5432/polkadot-archive-dev".to_string(),
+        uri: "postgres://koushiro:123@localhost:5432/archive-dev".to_string(),
         min_connections: 1,
         max_connections: 2,
         connect_timeout: 30,
@@ -19,10 +19,10 @@ async fn main() -> Result<(), SqlxError> {
     let db = PostgresDb::new(config).await?;
 
     let metadata = MetadataModel {
-        spec_version: 0,
+        version: 0,
         block_num: 0,
         block_hash: vec![0],
-        meta: vec![1, 2, 3, 4, 5],
+        metadata: vec![1, 2, 3, 4, 5],
     };
     let _ = db.insert(metadata).await?;
 
@@ -36,7 +36,7 @@ async fn main() -> Result<(), SqlxError> {
 
     for i in 0..=u8::MAX {
         let block = BlockModel {
-            spec_version: 0,
+            version: 0,
             block_num: u32::from(i),
             block_hash: vec![i],
             parent_hash: vec![i],

@@ -1,6 +1,6 @@
 import { Entity, PrimaryColumn, Column } from 'typeorm';
 
-@Entity()
+@Entity({ synchronize: false })
 export class Block {
   @PrimaryColumn({ type: 'integer' })
   blockNum!: number;

@@ -42,27 +42,25 @@ impl<Block: BlockT> MetadataActor<Block> {
 
     async fn meta_checker(
         &self,
-        spec_version: u32,
+        version: u32,
         block_num: <Block::Header as HeaderT>::Number,
         block_hash: Block::Hash,
     ) -> Result<(), ActorError> {
-        let is_exist = self.db.send(DbIfMetadataExist { spec_version }).await??;
+        let is_exist = self.db.send(DbIfMetadataExist { version }).await??;
         if !is_exist {
             log::info!(
                 target: "actor",
                 "Getting metadata, version = {}, block_num = {}, block_hash = {}",
-                spec_version,
-                block_num,
-                block_hash
+                version, block_num, block_hash
             );
             let api = self.api.clone();
             let id = BlockId::Hash(block_hash);
             let meta = tokio::task::spawn_blocking(move || api.metadata(&id)).await??;
             let metadata = MetadataMessage {
-                spec_version,
+                version,
                 block_num,
                 block_hash,
-                meta: meta.to_vec(),
+                metadata: meta.to_vec(),
             };
             self.db.send(metadata).await?;
         }
@@ -71,7 +69,7 @@ impl<Block: BlockT> MetadataActor<Block> {
 
     async fn block_handler(&self, message: BlockMessage<Block>) -> Result<(), ActorError> {
         self.meta_checker(
-            message.spec_version,
+            message.version,
             *message.inner.block.header().number(),
             message.inner.block.hash(),
         )
@@ -84,13 +82,9 @@ impl<Block: BlockT> MetadataActor<Block> {
         &self,
         message: BatchBlockMessage<Block>,
     ) -> Result<(), ActorError> {
-        for block in message
-            .inner()
-            .iter()
-            .unique_by(|&block| block.spec_version)
-        {
+        for block in message.inner().iter().unique_by(|&block| block.version) {
             self.meta_checker(
-                block.spec_version,
+                block.version,
                 *block.inner.block.header().number(),
                 block.inner.block.hash(),
             )

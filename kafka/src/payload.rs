@@ -13,16 +13,16 @@ use sp_storage::{StorageData, StorageKey};
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MetadataPayload<Block: BlockT> {
-    pub spec_version: u32,
+    pub version: u32,
     pub block_num: <Block::Header as HeaderT>::Number,
     pub block_hash: <Block::Header as HeaderT>::Hash,
-    pub meta: Bytes,
+    pub metadata: Bytes,
 }
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BlockPayload<Block: BlockT> {
-    pub spec_version: u32,
+    pub version: u32,
     pub block_num: <Block::Header as HeaderT>::Number,
     pub block_hash: <Block::Header as HeaderT>::Hash,
     pub parent_hash: <Block::Header as HeaderT>::Hash,
@@ -66,17 +66,17 @@ pub struct FinalizedBlockPayload<Block: BlockT> {
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MetadataPayloadForDemo {
-    pub spec_version: u32,
+    pub version: u32,
     pub block_num: u32,
     pub block_hash: String,
-    pub meta: Bytes,
+    pub metadata: Bytes,
 }
 
 // only for example `demo`
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BlockPayloadForDemo {
-    pub spec_version: u32,
+    pub version: u32,
     pub block_num: u32,
     pub block_hash: String,
     pub parent_hash: String,

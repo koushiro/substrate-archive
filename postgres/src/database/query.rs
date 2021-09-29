@@ -5,7 +5,7 @@ use sqlx::{
 };
 
 pub async fn check_if_metadata_exists(
-    spec_version: u32,
+    version: u32,
     conn: &mut PoolConnection<Postgres>,
 ) -> Result<bool, SqlxError> {
     /// Return type of queries that `SELECT EXISTS`
@@ -15,9 +15,9 @@ pub async fn check_if_metadata_exists(
     }
 
     let mut args = PgArguments::default();
-    args.add(spec_version);
+    args.add(version);
     let doest_exist: DoesExist = sqlx::query_as_with(
-        r#"SELECT EXISTS(SELECT spec_version FROM metadata WHERE spec_version = $1)"#,
+        r#"SELECT EXISTS(SELECT version FROM metadata WHERE version = $1)"#,
         args,
     )
     .fetch_one(conn)
@@ -29,17 +29,17 @@ pub async fn get_all_metadata_versions(
     conn: &mut PoolConnection<Postgres>,
 ) -> Result<Vec<u32>, SqlxError> {
     #[derive(Copy, Clone, Debug, Eq, PartialEq, FromRow)]
-    struct SpecVersion {
-        spec_version: i32,
+    struct Version {
+        version: i32,
     }
 
-    let versions: Vec<SpecVersion> = sqlx::query_as(r#"SELECT spec_version FROM metadata"#)
+    let versions: Vec<Version> = sqlx::query_as(r#"SELECT version FROM metadata"#)
         .fetch_all(conn)
         .await?;
 
     Ok(versions
         .into_iter()
-        .map(|result| result.spec_version as u32)
+        .map(|result| result.version as u32)
         .collect())
 }
 

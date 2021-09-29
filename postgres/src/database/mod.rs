@@ -73,9 +73,9 @@ impl PostgresDb {
         Ok(rows1 + rows2 + rows3)
     }
 
-    pub async fn if_metadata_exists(&self, spec_version: u32) -> Result<bool, SqlxError> {
+    pub async fn if_metadata_exists(&self, version: u32) -> Result<bool, SqlxError> {
         let mut conn = self.conn().await?;
-        let does_exist = query::check_if_metadata_exists(spec_version, &mut conn).await?;
+        let does_exist = query::check_if_metadata_exists(version, &mut conn).await?;
         Ok(does_exist)
     }
 

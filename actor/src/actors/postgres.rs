@@ -48,7 +48,7 @@ impl<Block: BlockT> PostgresActor<Block> {
 
     async fn block_handler(&self, message: BlockMessage<Block>) -> Result<(), ActorError> {
         let mut conn = self.db.conn().await?;
-        while !query::check_if_metadata_exists(message.spec_version, &mut conn).await? {
+        while !query::check_if_metadata_exists(message.version, &mut conn).await? {
             tokio::time::sleep(Duration::from_millis(20)).await;
         }
         mem::drop(conn);
@@ -71,7 +71,7 @@ impl<Block: BlockT> PostgresActor<Block> {
     // Returns true if all metadata versions are in database
     // Otherwise, returns false if some metadata versions are missing.
     fn db_contains_metadata(blocks: &[BlockMessage<Block>], all_versions: &HashSet<u32>) -> bool {
-        let versions: HashSet<u32> = blocks.iter().map(|block| block.spec_version).collect();
+        let versions: HashSet<u32> = blocks.iter().map(|block| block.version).collect();
         versions.is_subset(all_versions)
     }
 
@@ -202,7 +202,7 @@ impl<Block: BlockT> Handler<DbIfMetadataExist> for PostgresActor<Block> {
         message: DbIfMetadataExist,
         _ctx: &mut Context<Self>,
     ) -> <DbIfMetadataExist as Message>::Result {
-        self.db.if_metadata_exists(message.spec_version).await
+        self.db.if_metadata_exists(message.version).await
     }
 }
 

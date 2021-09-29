@@ -93,12 +93,12 @@ impl<B: BlockT> SendPayload for MetadataPayload<B> {
         log::info!(
             target: "kafka",
             "Publish metadata to kafka, version = {}",
-            self.spec_version
+            self.version
         );
         let topic = &producer.config.topic.metadata;
         let payload = serde_json::to_string(&self)
             .expect("Serialize metadata payload shouldn't be fail; qed");
-        let key = self.spec_version.to_string();
+        let key = self.version.to_string();
         producer.send_inner(topic, &payload, Some(&key)).await
     }
 }
@@ -142,12 +142,12 @@ impl SendPayload for MetadataPayloadForDemo {
         log::info!(
             target: "kafka",
             "Publish metadata to kafka, version = {}",
-            self.spec_version
+            self.version
         );
         let topic = &producer.config.topic.metadata;
         let payload = serde_json::to_string(&self)
             .expect("Serialize metadata payload shouldn't be fail; qed");
-        let key = self.spec_version.to_string();
+        let key = self.version.to_string();
         producer.send_inner(topic, &payload, Some(&key)).await
     }
 }

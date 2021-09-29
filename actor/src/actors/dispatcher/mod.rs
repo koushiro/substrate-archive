@@ -84,15 +84,12 @@ impl<Block: BlockT> Dispatcher<Block> {
                 Ok(_) => log::debug!(
                     target: "actor",
                     "Dispatch `Metadata` message into `{}`, version = {}",
-                    name,
-                    message.spec_version
+                    name, message.version
                 ),
                 Err(err) => log::error!(
                     target: "actor",
                     "Failed to dispatch `Metadata` message into `{}`, version = {}: {}",
-                    name,
-                    message.spec_version,
-                    err
+                    name, message.version, err
                 ),
             }
         }

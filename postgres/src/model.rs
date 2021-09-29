@@ -3,15 +3,15 @@ use sqlx::FromRow;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, FromRow)]
 pub struct MetadataModel {
-    pub spec_version: u32,
+    pub version: u32,
     pub block_num: u32,
     pub block_hash: Vec<u8>,
-    pub meta: Vec<u8>,
+    pub metadata: Vec<u8>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, FromRow)]
 pub struct BlockModel {
-    pub spec_version: u32,
+    pub version: u32,
     pub block_num: u32,
     pub block_hash: Vec<u8>,
     pub parent_hash: Vec<u8>,

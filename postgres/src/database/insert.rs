@@ -18,22 +18,22 @@ impl InsertModel for MetadataModel {
         let query: Query<'_, Postgres, PgArguments> = sqlx::query(
             r#"
             INSERT INTO metadata VALUES ($1, $2, $3, $4)
-            ON CONFLICT (spec_version) DO UPDATE SET
-                spec_version = EXCLUDED.spec_version,
+            ON CONFLICT (version) DO UPDATE SET
+                version = EXCLUDED.version,
                 block_num = EXCLUDED.block_num,
                 block_hash = EXCLUDED.block_hash,
-                meta = EXCLUDED.meta
+                metadata = EXCLUDED.metadata
             "#,
         )
-        .bind(self.spec_version)
+        .bind(self.version)
         .bind(self.block_num)
         .bind(self.block_hash)
-        .bind(self.meta);
+        .bind(self.metadata);
 
         log::info!(
             target: "postgres",
             "Insert metadata into postgres, version = {}",
-            self.spec_version
+            self.version
         );
         let rows_affected = query.execute(conn).await?.rows_affected();
         log::info!(
@@ -52,7 +52,7 @@ impl InsertModel for BlockModel {
             r#"
             INSERT INTO block VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             ON CONFLICT (block_num) DO UPDATE SET
-                spec_version = EXCLUDED.spec_version,
+                version = EXCLUDED.version,
                 block_num = EXCLUDED.block_num,
                 block_hash = EXCLUDED.block_hash,
                 parent_hash = EXCLUDED.parent_hash,
@@ -63,7 +63,7 @@ impl InsertModel for BlockModel {
                 justifications = EXCLUDED.justifications
             "#,
         )
-        .bind(self.spec_version)
+        .bind(self.version)
         .bind(self.block_num)
         .bind(self.block_hash)
         .bind(self.parent_hash)
@@ -103,7 +103,7 @@ impl InsertModel for Vec<BlockModel> {
             "INSERT INTO block VALUES",
             r#"
             ON CONFLICT (block_num) DO UPDATE SET
-                spec_version = EXCLUDED.spec_version,
+                version = EXCLUDED.version,
                 block_num = EXCLUDED.block_num,
                 block_hash = EXCLUDED.block_hash,
                 parent_hash = EXCLUDED.parent_hash,
@@ -120,7 +120,7 @@ impl InsertModel for Vec<BlockModel> {
                 batch.append(",");
             }
             batch.append("(");
-            batch.bind(model.spec_version)?;
+            batch.bind(model.version)?;
             batch.append(",");
             batch.bind(model.block_num)?;
             batch.append(",");

@@ -73,7 +73,7 @@ where
                 );
 
                 Ok(Some(BlockMessage {
-                    spec_version: runtime_version.spec_version,
+                    version: runtime_version.spec_version,
                     inner: block,
                     main_changes: changes.main_storage_changes,
                     child_changes: changes.child_storage_changes,

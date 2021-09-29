@@ -17,10 +17,10 @@ use crate::error::{ActorError, SqlxError};
 
 #[derive(Clone, Debug)]
 pub struct MetadataMessage<Block: BlockT> {
-    pub spec_version: u32,
+    pub version: u32,
     pub block_num: <Block::Header as HeaderT>::Number,
     pub block_hash: <Block::Header as HeaderT>::Hash,
-    pub meta: Vec<u8>,
+    pub metadata: Vec<u8>,
 }
 
 impl<Block: BlockT> xtra::Message for MetadataMessage<Block> {
@@ -30,10 +30,10 @@ impl<Block: BlockT> xtra::Message for MetadataMessage<Block> {
 impl<Block: BlockT> From<MetadataMessage<Block>> for archive_postgres::MetadataModel {
     fn from(metadata: MetadataMessage<Block>) -> Self {
         Self {
-            spec_version: metadata.spec_version,
+            version: metadata.version,
             block_num: metadata.block_num.saturated_into(),
             block_hash: metadata.block_hash.as_ref().to_vec(),
-            meta: metadata.meta,
+            metadata: metadata.metadata,
         }
     }
 }
@@ -41,17 +41,17 @@ impl<Block: BlockT> From<MetadataMessage<Block>> for archive_postgres::MetadataM
 impl<Block: BlockT> From<MetadataMessage<Block>> for archive_kafka::MetadataPayload<Block> {
     fn from(metadata: MetadataMessage<Block>) -> Self {
         Self {
-            spec_version: metadata.spec_version,
+            version: metadata.version,
             block_num: metadata.block_num,
             block_hash: metadata.block_hash,
-            meta: metadata.meta.into(),
+            metadata: metadata.metadata.into(),
         }
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct BlockMessage<Block: BlockT> {
-    pub spec_version: u32,
+    pub version: u32,
     pub inner: SignedBlock<Block>,
     pub main_changes: StorageCollection,
     pub child_changes: ChildStorageCollection,
@@ -75,13 +75,13 @@ fn is_well_known_key(key: &[u8]) -> bool {
 }
 
 fn into_block_model<Block: BlockT>(
-    spec_version: u32,
+    version: u32,
     block_num: u32,
     block_hash: Vec<u8>,
     block: SignedBlock<Block>,
 ) -> archive_postgres::BlockModel {
     archive_postgres::BlockModel {
-        spec_version,
+        version,
         block_num,
         block_hash: block_hash.clone(),
         parent_hash: block.block.header().parent_hash().as_ref().to_vec(),
@@ -167,12 +167,7 @@ impl<Block: BlockT> From<BlockMessage<Block>>
         let block_num = (*block.inner.block.header().number()).saturated_into();
         let block_hash = block.inner.block.header().hash().as_ref().to_vec();
         (
-            into_block_model(
-                block.spec_version,
-                block_num,
-                block_hash.clone(),
-                block.inner,
-            ),
+            into_block_model(block.version, block_num, block_hash.clone(), block.inner),
             into_main_storage_models(block_num, block_hash.clone(), block.main_changes),
             into_child_storage_models(block_num, block_hash, block.child_changes),
         )
@@ -182,7 +177,7 @@ impl<Block: BlockT> From<BlockMessage<Block>>
 impl<Block: BlockT> From<BlockMessage<Block>> for archive_kafka::BlockPayload<Block> {
     fn from(block: BlockMessage<Block>) -> Self {
         Self {
-            spec_version: block.spec_version,
+            version: block.version,
             block_num: *block.inner.block.header().number(),
             block_hash: block.inner.block.header().hash(),
             parent_hash: *block.inner.block.header().parent_hash(),
@@ -250,7 +245,7 @@ impl<Block: BlockT> From<BatchBlockMessage<Block>>
             let block_num = (*block.inner.block.header().number()).saturated_into();
             let block_hash = block.inner.block.header().hash().as_ref().to_vec();
             blocks.push(into_block_model(
-                block.spec_version,
+                block.version,
                 block_num,
                 block_hash.clone(),
                 block.inner,
@@ -336,7 +331,7 @@ impl<Block: BlockT> From<FinalizedBlockMessage<Block>>
 
 #[derive(Copy, Clone, Debug)]
 pub struct DbIfMetadataExist {
-    pub spec_version: u32,
+    pub version: u32,
 }
 impl xtra::Message for DbIfMetadataExist {
     type Result = Result<bool, SqlxError>;
