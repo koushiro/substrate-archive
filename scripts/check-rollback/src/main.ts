@@ -6,7 +6,7 @@ import { Block } from './entity/Block';
 
 createConnection({
   type: 'postgres',
-  host: '10.1.1.20',
+  host: 'localhost',
   port: 5432,
   username: 'koushiro',
   password: 'koushiro123',
@@ -32,11 +32,13 @@ createConnection({
         conn.getRepository(Block).findOne({ blockNum: i }),
         conn.getRepository(Block).findOne({ blockNum: i - 1 }),
       ]);
-      if (
-        block &&
-        parentBlock &&
-        block.parentHash.toString('hex') !== parentBlock.blockHash.toString('hex')
-      ) {
+      if (block === undefined) {
+        throw new Error(`Block #${i} Not Found`);
+      }
+      if (parentBlock === undefined) {
+        throw new Error(`Block #${i - 1} Not Found`);
+      }
+      if (block.parentHash.toString('hex') !== parentBlock.blockHash.toString('hex')) {
         console.log(`Block #${i}, parentHash 0x${block.parentHash.toString('hex')}`);
         console.log(`ParentBlock #${i - 1}, blockHash 0x${parentBlock.blockHash.toString('hex')}`);
       }

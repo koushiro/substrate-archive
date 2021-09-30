@@ -222,29 +222,58 @@ where
 
     // main logic
     async fn tick(&mut self) -> Result<(), ActorError> {
-        let (_best_block, finalized_block) = self.best_and_finalized().await?;
+        let (_best_num, finalized_num) = self.best_and_finalized().await?;
 
         // update the current finalized block
-        if self.curr_finalized_block_num() != finalized_block {
-            // finalized block must exist
-            let header = self
-                .header(finalized_block)?
-                .expect("finalized block must exist");
+        if self.curr_finalized_block_num() != finalized_num {
             log::debug!(target: "actor", "Before update current finalized block, Queue: {}", self.log_queue());
-            self.queue.insert(finalized_block, header);
+
+            while {
+                // finalized block number must exist
+                let finalized_header = self
+                    .header(finalized_num)?
+                    .expect("finalized block must exist");
+                let finalized_hash = finalized_header.hash();
+                let old_header = self.queue.insert(finalized_num, finalized_header);
+                // fix issue https://github.com/patractlabs/archive/pull/67
+                old_header.is_some() && (old_header.unwrap().hash() != finalized_hash)
+            } {
+                log::info!(target: "actor", "⚠️  Finalized Block #{} is forked", finalized_num);
+                log::info!(
+                    target: "actor",
+                    "♻️  Rollback to Finalized Block #{}, Queue: {}",
+                    finalized_num, self.log_queue(),
+                );
+                // delete forked block from db
+                self.db
+                    .send(DbDeleteGtBlockNum::new(finalized_num - 1))
+                    .await??;
+                // re-construct queue
+                let finalized_block = self
+                    .crawl_block(finalized_num)
+                    .await?
+                    .expect("finalized block must exist");
+                let finalized_header = finalized_block.inner.block.header();
+                self.queue.clear();
+                self.queue.insert(finalized_num, finalized_header.clone());
+                // reset the curr_block
+                self.curr_block = finalized_num;
+                self.metadata.send(finalized_block).await?;
+            }
             // remove the finalized blocks (remain one finalized block on the front) from the queue.
-            self.queue.retain(|h, _| *h >= finalized_block);
+            self.queue.retain(|h, _| *h >= finalized_num);
+
             log::debug!(
                 target: "actor", "After update current finalized block #{}, Queue: {}",
-                finalized_block, self.log_queue()
+                finalized_num, self.log_queue()
             );
         }
 
-        if self.curr_block + self.config.max_block_load <= finalized_block {
+        if self.curr_block + self.config.max_block_load <= finalized_num {
             // Haven't caught up with the latest finalized block
             self.tick_batch().await?;
         } else {
-            if self.curr_block < finalized_block {
+            if self.curr_block < finalized_num {
                 // It's about to catch up with the latest finalized block
                 self.tick_one_about_to_catch_up().await?;
             } else {
@@ -253,11 +282,11 @@ where
             }
         }
 
-        // start to dispatch finalized block
-        if !self.catchup_finalized && self.curr_block > finalized_block {
+        // start to dispatch finalized block if we have dispatchers.
+        if !self.catchup_finalized && self.curr_block > finalized_num {
             log::info!(
                 target: "actor", "Scheduler catchup the finalized block (curr #{}, finalized #{})",
-                self.curr_block, finalized_block
+                self.curr_block, finalized_num
             );
             self.catchup_finalized = true;
             self.db.send(CatchupFinalized).await?;
@@ -309,7 +338,7 @@ where
         let next_block = self.curr_block + 1;
         log::debug!(target: "actor", "BlockActor[0] Crawling Block #{}", next_block);
         let block = self
-            .crawl_next_block(next_block)
+            .crawl_block(next_block)
             .await?
             .expect("finalized block must exist");
         self.metadata.send(block).await?;
@@ -334,8 +363,9 @@ where
             let next_block = self.curr_block + 1;
             log::debug!(target: "actor", "BlockActor[0] Crawling Block #{}", next_block);
 
-            if let Some(block) = self.crawl_next_block(next_block).await? {
+            if let Some(block) = self.crawl_block(next_block).await? {
                 let next_header = block.inner.block.header();
+                // check if is forked block
                 if next_header.parent_hash() != &self.queue_back_block_hash() {
                     // the block is forked
                     let curr_block = self.curr_block;
@@ -351,7 +381,7 @@ where
                         // curr_block <= curr_finalized_block
                         // re-construct queue
                         let finalized_block = self
-                            .crawl_next_block(curr_finalized_block)
+                            .crawl_block(curr_finalized_block)
                             .await?
                             .expect("finalized block must exist");
                         let finalized_header = finalized_block.inner.block.header();
@@ -386,12 +416,9 @@ where
         Ok(())
     }
 
-    async fn crawl_next_block(
-        &self,
-        block_num: u32,
-    ) -> Result<Option<BlockMessage<Block>>, ActorError> {
+    async fn crawl_block(&self, num: u32) -> Result<Option<BlockMessage<Block>>, ActorError> {
         let actor = self.blocks.first().expect("At least one block actor");
-        Ok(actor.send(CrawlBlock::new(block_num)).await?)
+        Ok(actor.send(CrawlBlock::new(num)).await?)
     }
 }
 
