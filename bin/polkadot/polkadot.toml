@@ -19,7 +19,7 @@ console = { level = "DEBUG" }
 ## RocksDB backend configuration for archive client
 [client.rocksdb]
 path = "../polkadot/database/chains/polkadot/db"
-max_open_files = 16
+#max_open_files = 16
 cache_size = 128
 secondary_db_path = "./rocksdb_secondary"
 

@@ -1,7 +1,7 @@
 use std::{str::FromStr, sync::Arc};
 
 use sc_client_api::execution_extensions::{ExecutionExtensions, ExecutionStrategies};
-use sc_executor::{NativeExecutionDispatch, NativeExecutor};
+use sc_executor::{NativeElseWasmExecutor, NativeExecutionDispatch};
 use sp_core::testing::TaskExecutor;
 use sp_runtime::traits::Block as BlockT;
 use sp_state_machine::ExecutionStrategy;
@@ -20,7 +20,7 @@ pub type ArchiveBackend<Block> = ReadOnlyBackend<Block>;
 
 /// Archive client call executor type.
 pub type ArchiveCallExecutor<Block, Executor> =
-    sc_service::LocalCallExecutor<Block, ReadOnlyBackend<Block>, NativeExecutor<Executor>>;
+    sc_service::LocalCallExecutor<Block, ReadOnlyBackend<Block>, NativeElseWasmExecutor<Executor>>;
 
 /// Archive client type.
 pub type ArchiveClient<Block, Executor, RA> =
@@ -48,7 +48,7 @@ where
 {
     let executor = ArchiveCallExecutor::new(
         backend.clone(),
-        NativeExecutor::<Executor>::new(
+        NativeElseWasmExecutor::<Executor>::new(
             config.executor.wasm_exec_method.into(),
             config.executor.default_heap_pages,
             config.executor.max_runtime_instances,

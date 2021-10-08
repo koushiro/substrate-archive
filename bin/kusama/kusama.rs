@@ -7,17 +7,23 @@ use serde::{Deserialize, Serialize};
 
 use sc_chain_spec::{ChainSpecExtension, GenericChainSpec};
 use sc_client_api::{BadBlocks, ForkBlocks};
-use sc_executor::native_executor_instance;
+use sc_executor::{NativeExecutionDispatch, NativeVersion};
 
 use archive::{Archive, ArchiveCli, ArchiveError, ArchiveSystemBuilder};
 use archive_primitives::Block;
 
-native_executor_instance!(
-    pub KusamaExecutor,
-    kusama_runtime::api::dispatch,
-    kusama_runtime::native_version,
-    frame_benchmarking::benchmarking::HostFunctions,
-);
+pub struct KusamaExecutorDispatch;
+impl NativeExecutionDispatch for KusamaExecutorDispatch {
+    type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
+
+    fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+        kusama_runtime::api::dispatch(method, data)
+    }
+
+    fn native_version() -> NativeVersion {
+        kusama_runtime::native_version()
+    }
+}
 
 /// Node `ChainSpec` extensions.
 ///
@@ -36,7 +42,7 @@ pub struct Extensions {
 type KusamaChainSpec = GenericChainSpec<kusama_runtime::GenesisConfig, Extensions>;
 
 type KusamaArchiveSystemBuilder =
-    ArchiveSystemBuilder<Block, KusamaExecutor, kusama_runtime::RuntimeApi>;
+    ArchiveSystemBuilder<Block, KusamaExecutorDispatch, kusama_runtime::RuntimeApi>;
 
 fn main() -> Result<(), ArchiveError> {
     let config = ArchiveCli::init()?;

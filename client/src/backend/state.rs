@@ -209,7 +209,7 @@ impl<B: BlockT> StateBackend<HashFor<B>> for RefTrackingState<B> {
         self.state.child_keys(child_info, prefix)
     }
 
-    fn as_trie_backend(&mut self) -> Option<&TrieBackend<Self::TrieBackendStorage, HashFor<B>>> {
+    fn as_trie_backend(&self) -> Option<&TrieBackend<Self::TrieBackendStorage, HashFor<B>>> {
         self.state.as_trie_backend()
     }
 

@@ -7,17 +7,23 @@ use serde::{Deserialize, Serialize};
 
 use sc_chain_spec::{ChainSpecExtension, GenericChainSpec};
 use sc_client_api::{BadBlocks, ForkBlocks};
-use sc_executor::native_executor_instance;
+use sc_executor::{NativeExecutionDispatch, NativeVersion};
 
 use archive::{Archive, ArchiveCli, ArchiveError, ArchiveSystemBuilder};
 use archive_primitives::Block;
 
-native_executor_instance!(
-    pub PolkadotExecutor,
-    polkadot_runtime::api::dispatch,
-    polkadot_runtime::native_version,
-    frame_benchmarking::benchmarking::HostFunctions,
-);
+pub struct PolkadotExecutorDispatch;
+impl NativeExecutionDispatch for PolkadotExecutorDispatch {
+    type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
+
+    fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+        polkadot_runtime::api::dispatch(method, data)
+    }
+
+    fn native_version() -> NativeVersion {
+        polkadot_runtime::native_version()
+    }
+}
 
 /// Node `ChainSpec` extensions.
 ///
@@ -36,7 +42,7 @@ pub struct Extensions {
 type PolkadotChainSpec = GenericChainSpec<polkadot_runtime::GenesisConfig, Extensions>;
 
 type PolkadotArchiveSystemBuilder =
-    ArchiveSystemBuilder<Block, PolkadotExecutor, polkadot_runtime::RuntimeApi>;
+    ArchiveSystemBuilder<Block, PolkadotExecutorDispatch, polkadot_runtime::RuntimeApi>;
 
 fn main() -> Result<(), ArchiveError> {
     let config = ArchiveCli::init()?;

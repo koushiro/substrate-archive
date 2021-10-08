@@ -31,15 +31,12 @@ impl fmt::Debug for SecondaryRocksDb {
 impl SecondaryRocksDb {
     pub fn open(config: RocksDbConfig) -> io::Result<Self> {
         let path = config.path.to_str().expect("Cannot find primary rocksdb");
-        let secondary_db_path = config
-            .secondary_db_path
-            .to_str()
-            .expect("Must specify the secondary db path");
         let cache_size = config.cache_size;
 
         let mut db_config = DatabaseConfig::with_columns(NUM_COLUMNS);
-        db_config.secondary = Some(secondary_db_path.to_string());
-        db_config.max_open_files = config.max_open_files;
+        db_config.secondary = Some(config.secondary_db_path);
+        // `max_open_files` is useless for rocksdb secondary instance.
+        // db_config.max_open_files = config.max_open_files;
 
         let mut memory_budget = HashMap::new();
         // Full node database.
