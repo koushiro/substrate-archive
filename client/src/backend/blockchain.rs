@@ -220,6 +220,7 @@ where
                 finalized_state: None,
                 // log::warn!("Leaves are not counted on the read-only backend!");
                 number_leaves: 0,
+                block_gap: None,
             },
             Err(err) => {
                 log::error!(target: "client", "read meta error: {}", err);
@@ -231,6 +232,7 @@ where
                     finalized_number: Zero::zero(),
                     finalized_state: None,
                     number_leaves: 0,
+                    block_gap: None,
                 }
             }
         }

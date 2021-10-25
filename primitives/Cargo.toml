@@ -5,4 +5,4 @@ authors = ["Patract <https://github.com/patractlabs>"]
 edition = "2018"
 
 [dependencies]
-sp-runtime = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
+sp-runtime = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
