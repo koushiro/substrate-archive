@@ -18,15 +18,14 @@ console = { level = "DEBUG" }
 
 ## RocksDB backend configuration for archive client
 [client.rocksdb]
-path = "../polkadot/database/chains/polkadot/db"
-#max_open_files = 16
+path = "../polkadot/database/chains/polkadot/db/full"
 cache_size = 128
 secondary_db_path = "./rocksdb_secondary"
 
 [client.executor]
 wasm_exec_method = "Compiled" # or "Interpreted"
 default_heap_pages = 4096
-max_runtime_instances = 8
+max_runtime_instances = 16
 
 ###################################
 # Archive scheduler configuration #

@@ -15,7 +15,6 @@ type DatabaseResult<T> = sp_database::error::Result<T>;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RocksDbConfig {
     pub path: PathBuf,
-    pub max_open_files: i32,
     pub cache_size: usize,
     pub secondary_db_path: PathBuf,
 }
