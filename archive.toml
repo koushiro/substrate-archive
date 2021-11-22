@@ -54,6 +54,7 @@ disable_statement_logging = false
 #metadata = "polkadot-metadata-dev"
 #block = "polkadot-block-dev"
 #finalized_block = "polkadot-finalized-block-dev"
+
 ## https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
 ##
 ## https://stackoverflow.com/questions/59322133/kafka-broker-message-size-too-large
