@@ -5,8 +5,8 @@ use std::sync::Arc;
 use codec::{Decode, Encode};
 use sc_client_db::{DbHash, TransactionStorageMode};
 use sp_blockchain::{
-    Backend as BlockchainBackend, BlockStatus, Cache, CachedHeaderMetadata, HeaderBackend,
-    HeaderMetadata, HeaderMetadataCache, Info,
+    Backend as BlockchainBackend, BlockStatus, CachedHeaderMetadata, HeaderBackend, HeaderMetadata,
+    HeaderMetadataCache, Info,
 };
 use sp_database::Database;
 use sp_runtime::{
@@ -140,10 +140,6 @@ where
 
     fn last_finalized(&self) -> BlockchainResult<Block::Hash> {
         Ok(utils::read_meta::<Block>(&*self.db, columns::HEADER)?.finalized_hash)
-    }
-
-    fn cache(&self) -> Option<Arc<dyn Cache<Block>>> {
-        None
     }
 
     fn leaves(&self) -> BlockchainResult<Vec<Block::Hash>> {

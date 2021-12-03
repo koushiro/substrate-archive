@@ -5,7 +5,7 @@ pub mod state;
 use std::{collections::HashSet, sync::Arc};
 
 use sc_client_api::{
-    backend::{AuxStore, Backend, PrunableStateChangesTrieStorage},
+    backend::{AuxStore, Backend},
     blockchain::Info,
     client::BlockBackend,
     UsageInfo,
@@ -128,11 +128,6 @@ where
 
     fn usage_info(&self) -> Option<UsageInfo> {
         // TODO: Implement usage info (for state reads)
-        None
-    }
-
-    fn changes_trie_storage(&self) -> Option<&dyn PrunableStateChangesTrieStorage<Block>> {
-        // TODO: Implement Changes Trie
         None
     }
 

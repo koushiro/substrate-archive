@@ -57,7 +57,7 @@ where
         self.api.execute_block(&parent_id, block)?;
         let storage_changes = self
             .api
-            .into_storage_changes(&state, None, parent_hash)
+            .into_storage_changes(&state, parent_hash)
             .map_err(BlockchainError::StorageChanges)?;
         Ok(StorageChanges {
             main_storage_changes: storage_changes.main_storage_changes,

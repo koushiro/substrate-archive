@@ -29,8 +29,7 @@ pub struct BlockPayload<Block: BlockT> {
     pub state_root: <Block::Header as HeaderT>::Hash,
     pub extrinsics_root: <Block::Header as HeaderT>::Hash,
     #[serde(serialize_with = "self::serialize_digest")]
-    #[serde(bound(serialize = "Digest<<Block::Header as HeaderT>::Hash>: codec::Encode"))]
-    pub digest: Digest<<Block::Header as HeaderT>::Hash>,
+    pub digest: Digest,
     pub extrinsics: Vec<<Block as BlockT>::Extrinsic>,
 
     pub justifications: Option<Justifications>,

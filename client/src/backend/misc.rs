@@ -3,14 +3,9 @@ use std::collections::HashMap;
 use sc_client_api::backend::{BlockImportOperation, NewBlockState, TransactionForSB};
 use sp_blockchain::well_known_cache_keys;
 use sp_core::offchain::OffchainStorage;
-use sp_runtime::{
-    generic::BlockId,
-    traits::{Block as BlockT, HashFor, NumberFor},
-    Justification, Justifications,
-};
+use sp_runtime::{generic::BlockId, traits::Block as BlockT, Justification, Justifications};
 use sp_state_machine::{
-    ChangesTrieTransaction, ChildStorageCollection, IndexOperation, OffchainChangesCollection,
-    StorageCollection,
+    ChildStorageCollection, IndexOperation, OffchainChangesCollection, StorageCollection,
 };
 use sp_storage::Storage;
 
@@ -80,14 +75,6 @@ where
         _offchain_update: OffchainChangesCollection,
     ) -> BlockchainResult<()> {
         log::warn!("Cannot modify storage of a read-only backend, offchain storage not updated");
-        Ok(())
-    }
-
-    fn update_changes_trie(
-        &mut self,
-        _update: ChangesTrieTransaction<HashFor<Block>, NumberFor<Block>>,
-    ) -> BlockchainResult<()> {
-        log::warn!("Cannot modify storage of a read-only backend, changes trie not updated");
         Ok(())
     }
 

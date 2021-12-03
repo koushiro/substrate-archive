@@ -4,7 +4,7 @@ use std::{marker::PhantomData, panic::UnwindSafe, sync::Arc};
 
 use codec::{Decode, Encode};
 use sc_client_api::{
-    backend::{self, KeyIterator, PrunableStateChangesTrieStorage, StorageProvider},
+    backend::{self, KeyIterator, StorageProvider},
     call_executor::{CallExecutor, ExecutorProvider},
     execution_extensions::ExecutionExtensions,
 };
@@ -12,13 +12,10 @@ use sp_api::{
     ApiError, ApiRef, BlockId, CallApiAt, CallApiAtParams, ConstructRuntimeApi,
     Metadata as MetadataApi, NativeOrEncoded, ProvideRuntimeApi,
 };
-use sp_blockchain::HeaderBackend;
-use sp_core::{convert_hash, ChangesTrieConfiguration, OpaqueMetadata};
-use sp_runtime::traits::{Block as BlockT, HashFor, Header as HeaderT, NumberFor, One};
-use sp_state_machine::{
-    key_changes, Backend as StateBackend, ChangesTrieAnchorBlockId, ChangesTrieConfigurationRange,
-};
-use sp_storage::{well_known_keys, ChildInfo, PrefixedStorageKey, StorageData, StorageKey};
+use sp_core::OpaqueMetadata;
+use sp_runtime::traits::Block as BlockT;
+use sp_state_machine::Backend as StateBackend;
+use sp_storage::{well_known_keys, ChildInfo, StorageData, StorageKey};
 use sp_version::RuntimeVersion;
 
 use crate::error::{BlockchainError, BlockchainResult};
@@ -84,56 +81,6 @@ where
     /// Get a reference to the state at a given block.
     pub fn state_at(&self, block: BlockId<Block>) -> BlockchainResult<Backend::State> {
         self.backend.state_at(block)
-    }
-
-    /// Returns changes trie storage and all configurations that have been active in the range [first; last].
-    ///
-    /// Configurations are returned in descending order (and obviously never overlap).
-    /// If fail_if_disabled is false, returns maximal consequent configurations ranges, starting from last and
-    /// stopping on either first, or when CT have been disabled.
-    /// If fail_if_disabled is true, fails when there's a subrange where CT have been disabled
-    /// inside first..last blocks range.
-    #[allow(clippy::type_complexity)]
-    fn require_changes_trie(
-        &self,
-        first: NumberFor<Block>,
-        last: Block::Hash,
-        fail_if_disabled: bool,
-    ) -> BlockchainResult<(
-        &dyn PrunableStateChangesTrieStorage<Block>,
-        Vec<(
-            NumberFor<Block>,
-            Option<(NumberFor<Block>, Block::Hash)>,
-            ChangesTrieConfiguration,
-        )>,
-    )> {
-        let storage = match self.backend.changes_trie_storage() {
-            Some(storage) => storage,
-            None => return Err(BlockchainError::ChangesTriesNotSupported),
-        };
-
-        let mut configs = Vec::with_capacity(1);
-        let mut current = last;
-        loop {
-            let config_range = storage.configuration_at(&BlockId::Hash(current))?;
-            match config_range.config {
-                Some(config) => configs.push((config_range.zero.0, config_range.end, config)),
-                None if !fail_if_disabled => return Ok((storage, configs)),
-                None => return Err(BlockchainError::ChangesTriesNotSupported),
-            }
-
-            if config_range.zero.0 < first {
-                break;
-            }
-
-            current = *self
-                .backend
-                .blockchain()
-                .expect_header(BlockId::Hash(config_range.zero.1))?
-                .parent_hash();
-        }
-
-        Ok((storage, configs))
     }
 }
 
@@ -334,100 +281,5 @@ where
         self.state_at(*id)?
             .child_storage_hash(child_info, &key.0)
             .map_err(|err| BlockchainError::from_state(Box::new(err)))
-    }
-
-    fn max_key_changes_range(
-        &self,
-        first: NumberFor<Block>,
-        last: BlockId<Block>,
-    ) -> BlockchainResult<Option<(NumberFor<Block>, BlockId<Block>)>> {
-        let last_number = self
-            .backend
-            .blockchain()
-            .expect_block_number_from_id(&last)?;
-        let last_hash = self.backend.blockchain().expect_block_hash_from_id(&last)?;
-        if first > last_number {
-            return Err(BlockchainError::ChangesTrieAccessFailed(
-                "Invalid changes trie range".into(),
-            ));
-        }
-
-        let (storage, configs) = match self.require_changes_trie(first, last_hash, false).ok() {
-            Some((storage, configs)) => (storage, configs),
-            None => return Ok(None),
-        };
-
-        let first_available_changes_trie = configs.last().map(|config| config.0);
-        match first_available_changes_trie {
-            Some(first_available_changes_trie) => {
-                let oldest_unpruned = storage.oldest_pruned_digest_range_end();
-                let first = std::cmp::max(first_available_changes_trie, oldest_unpruned);
-                Ok(Some((first, last)))
-            }
-            None => Ok(None),
-        }
-    }
-
-    fn key_changes(
-        &self,
-        first: NumberFor<Block>,
-        last: BlockId<Block>,
-        storage_key: Option<&PrefixedStorageKey>,
-        key: &StorageKey,
-    ) -> BlockchainResult<Vec<(NumberFor<Block>, u32)>> {
-        let last_number = self
-            .backend
-            .blockchain()
-            .expect_block_number_from_id(&last)?;
-        let last_hash = self.backend.blockchain().expect_block_hash_from_id(&last)?;
-        let (storage, configs) = self.require_changes_trie(first, last_hash, true)?;
-
-        let mut result = Vec::new();
-        let best_number = self.backend.blockchain().info().best_number;
-        for (config_zero, config_end, config) in configs {
-            let range_first = ::std::cmp::max(first, config_zero + One::one());
-            let range_anchor = match config_end {
-                Some((config_end_number, config_end_hash)) => {
-                    if last_number > config_end_number {
-                        ChangesTrieAnchorBlockId {
-                            hash: config_end_hash,
-                            number: config_end_number,
-                        }
-                    } else {
-                        ChangesTrieAnchorBlockId {
-                            hash: convert_hash(&last_hash),
-                            number: last_number,
-                        }
-                    }
-                }
-                None => ChangesTrieAnchorBlockId {
-                    hash: convert_hash(&last_hash),
-                    number: last_number,
-                },
-            };
-
-            let config_range = ChangesTrieConfigurationRange {
-                config: &config,
-                zero: config_zero,
-                end: config_end.map(|(config_end_number, _)| config_end_number),
-            };
-            let result_range: Vec<(NumberFor<Block>, u32)> = key_changes::<HashFor<Block>, _>(
-                config_range,
-                storage.storage(),
-                range_first,
-                &range_anchor,
-                best_number,
-                storage_key,
-                &key.0,
-            )
-            .and_then(|r| {
-                r.map(|r| r.map(|(block, tx)| (block, tx)))
-                    .collect::<Result<_, _>>()
-            })
-            .map_err(BlockchainError::ChangesTrieAccessFailed)?;
-            result.extend(result_range);
-        }
-
-        Ok(result)
     }
 }

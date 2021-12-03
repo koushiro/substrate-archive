@@ -1,6 +1,7 @@
 use std::{collections::HashMap, marker::PhantomData};
 
 use codec::Encode;
+use sp_blockchain::well_known_cache_keys;
 use sp_runtime::{
     generic::SignedBlock,
     traits::{Block as BlockT, Header as HeaderT},
@@ -62,14 +63,19 @@ impl<Block: BlockT> xtra::Message for BlockMessage<Block> {
 }
 
 fn is_well_known_key(key: &[u8]) -> bool {
+    const CACHE_KEY_AUTH: &[u8] = &well_known_cache_keys::AUTHORITIES;
+    const CACHE_KEY_EPOCH: &[u8] = &well_known_cache_keys::EPOCH;
+    const CACHE_KEY_CHANGES_TRIE_CONFIG: &[u8] = &well_known_cache_keys::CHANGES_TRIE_CONFIG;
     matches!(
         key,
         well_known_keys::CODE
             | well_known_keys::HEAP_PAGES
             | well_known_keys::EXTRINSIC_INDEX
-            | well_known_keys::CHANGES_TRIE_CONFIG
             | well_known_keys::CHILD_STORAGE_KEY_PREFIX
             | well_known_keys::DEFAULT_CHILD_STORAGE_KEY_PREFIX
+            | CACHE_KEY_AUTH
+            | CACHE_KEY_EPOCH
+            | CACHE_KEY_CHANGES_TRIE_CONFIG
             | sp_finality_grandpa::GRANDPA_AUTHORITIES_KEY
     )
 }
