@@ -18,7 +18,8 @@ console = { level = "DEBUG" }
 
 ## RocksDB backend configuration for archive client
 [client.rocksdb]
-path = "../polkadot/database/chains/polkadot/db/full"
+#path = "../polkadot/database/chains/polkadot/db/full"
+path = "/home/dev/workspace/bin/polkadot/polkadot_mainnet/database/chains/polkadot/db/full"
 cache_size = 128
 secondary_db_path = "./rocksdb_secondary"
 
