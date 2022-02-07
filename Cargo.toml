@@ -10,11 +10,9 @@ members = [
 [package]
 name = "archive"
 version = "0.1.0"
-authors = [
-  "Patract <https://github.com/patractlabs>",
-  "Andrew Plaza <andrew.plaza@parity.io>"
-]
-edition = "2018"
+authors = ["koushiro <koushiro.cqx@gmail.com>", "Parity Technologies <admin@parity.io>"]
+edition = "2021"
+rust-version = "1.56.1"
 description = "Synchronize the substrate-backed chain to index all Blocks, State, and Extrinsic data."
 
 [dependencies]

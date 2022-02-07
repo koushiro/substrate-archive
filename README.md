@@ -1,4 +1,4 @@
-# Archive
+# Substrate-Archive
 
 ## Requirement
 
@@ -46,13 +46,6 @@
 
 ```
 
-## Benchmark (10000 blocks)
-
- - 1 max_block_load:  19min58sec (No dispatch message to kafka)
- - 10 max_block_load: 10min24sec (No dispatch message to kafka)
- - 50 max_block_load:  10min01sec (No dispatch message to kafka)
- - 100 max_block_load: 09min44sec (No dispatch message to kafka) | 10min31sec
-
 ## License
 
-Under the Apache 2.0 license. See the [LICENSE](LICENSE) file for details.
+Under the GPL-v3 license. See the [LICENSE](LICENSE) file for details.
