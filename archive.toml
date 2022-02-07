@@ -1,0 +1,74 @@
+################################
+# Archive logger configuration #
+################################
+[logger]
+## Optional log level of console, default: "DEBUG"
+console = { level = "DEBUG" }
+## Optional log level of file, default: "DEBUG"
+## Optional log file path, default: "./archive.log"
+#file = { level = "DEBUG", path = "./archive.log" }
+
+################################
+# Archive client configuration #
+################################
+[client]
+## Directory where local WASM runtimes live. These runtimes take precedence
+## over on-chain runtimes when the spec version matches. Disable overrides by default.
+#wasm_runtime_overrides = "./wasm_runtime"
+
+## RocksDB backend configuration for archive client
+[client.rocksdb]
+path = "../polkadot/database/chains/polkadot/db/full"
+cache_size = 128
+secondary_db_path = "./rocksdb_secondary"
+
+[client.executor]
+wasm_exec_method = "Compiled" # or "Interpreted"
+default_heap_pages = 4096
+max_runtime_instances = 16
+runtime_cache_size = 2
+
+###################################
+# Archive scheduler configuration #
+###################################
+[scheduler]
+#start_block = 0
+max_block_load = 10
+interval_ms = 1000
+
+##################################
+# Archive postgres configuration #
+##################################
+[postgres]
+uri = "postgres://koushiro:koushiro123@localhost:5432/archive-dev"
+min_connections = 2
+max_connections = 8
+connect_timeout = 10
+disable_statement_logging = false
+
+####################################
+# Archive dispatcher configuration #
+####################################
+#[dispatcher.kafka]
+#queue_timeout = 0
+#[dispatcher.kafka.topic]
+#metadata = "polkadot-metadata-dev"
+#block = "polkadot-block-dev"
+#finalized_block = "polkadot-finalized-block-dev"
+
+## https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
+##
+## https://stackoverflow.com/questions/59322133/kafka-broker-message-size-too-large
+## https://kafka.apache.org/documentation/
+## Broker:
+##   `message.max.bytes`: default 1048588 (1 MB)
+##   `replica.fetch.max.bytes`: default 1048576 (1 MiB)
+## Producer:
+##   `message.max.bytes`: default 1048576 (1 MiB)
+## Consumer:
+##   `max.partition.fetch.bytes`: default 1048576 (1 MiB)
+##   `fetch.max.bytes`: default 57671680 (55 MiB)
+#[dispatcher.kafka.rdkafka]
+#"metadata.broker.list" = "localhost:9092" # or "bootstrap.servers" = "localhost:9092"
+#"compression.codec" = "none" # "none" | "gzip" | "lz4"
+#"message.max.bytes" = "134217728" # 128 MB

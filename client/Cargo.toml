@@ -1,0 +1,42 @@
+[package]
+name = "archive-client"
+version = "0.1.0"
+authors = ["koushiro <koushiro.cqx@gmail.com>", "Parity Technologies <admin@parity.io>"]
+edition = "2021"
+rust-version = "1.56.1"
+
+[dependencies]
+hex = "0.4"
+log = "0.4"
+parking_lot = "0.11"
+serde = { version = "1.0", features = ["derive"] }
+
+# Parity
+codec = { package = "parity-scale-codec", version = "2.2",  features = ["derive", "full"] }
+hash-db = "0.15"
+kvdb = "0.10"
+kvdb-rocksdb = "0.14"
+memory-db = "0.27"
+
+# Substrate
+sc-chain-spec = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sc-client-api = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sc-client-db = { version = "0.10.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sc-executor-common = { version = "0.10.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sc-executor = { version = "0.10.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", features = ["wasmtime"] }
+sc-service = { version = "0.10.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sc-state-db = { version = "0.10.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-api = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-blockchain = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-core = { version = "4.1.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-consensus = { version = "0.10.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-database = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-runtime = { version = "4.1.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-state-machine = { version = "0.10.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-storage = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-version = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-wasm-interface = { version = "4.1.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+
+[dev-dependencies]
+env_logger = "0.9"
+sp-io = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
