@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::BTreeMap, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -29,13 +29,13 @@ pub struct ClientConfig {
     /// are included in the chain_spec and primarily for fixing problematic on-chain wasm.
     /// If both are in use, the `wasm_runtime_overrides` takes precedence.
     #[serde(skip)]
-    pub(crate) wasm_runtime_substitutes: HashMap<String, Vec<u8>>,
+    pub(crate) code_substitutes: BTreeMap<String, Vec<u8>>,
 }
 
 impl ClientConfig {
     /// Set the code substitutes for a chain.
     pub fn set_code_substitutes(&mut self, spec: &dyn ChainSpec) {
-        self.wasm_runtime_substitutes = spec.code_substitutes();
+        self.code_substitutes = spec.code_substitutes();
     }
 }
 
@@ -50,6 +50,10 @@ pub struct ExecutorConfig {
     /// The default value is 8.
     #[serde(default = "default_max_runtime_instances")]
     pub max_runtime_instances: usize,
+
+    /// Maximum number of different runtimes that can be cached.
+    #[serde(default = "default_runtime_cache_size")]
+    pub runtime_cache_size: u8,
 }
 
 /// Specification of different methods of executing the runtime Wasm code.
@@ -78,6 +82,10 @@ impl From<WasmExecutionMethod> for sc_executor::WasmExecutionMethod {
 
 const fn default_max_runtime_instances() -> usize {
     8
+}
+
+const fn default_runtime_cache_size() -> u8 {
+    2
 }
 
 /// Configuration of the database of the client.

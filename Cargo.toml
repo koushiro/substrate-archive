@@ -35,13 +35,13 @@ toml = "0.5"
 
 # Parity / Substrate
 codec = { package = "parity-scale-codec", version = "2.2",  features = ["derive", "full"] }
-sc-chain-spec = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.15" }
-sc-client-api = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.15" }
-sc-executor = { version = "0.10.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.15", features = ["wasmtime"] }
-sp-api = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.15" }
-sp-blockchain = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.15" }
-sp-runtime = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.15" }
-frame-benchmarking = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.15" }
+sc-chain-spec = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sc-client-api = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sc-executor = { version = "0.10.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", features = ["wasmtime"] }
+sp-api = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-blockchain = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-runtime = { version = "4.1.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+frame-benchmarking = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 
 # Archive Components
 archive-client = { path = "./client" }
@@ -51,8 +51,8 @@ archive-kafka = { path = "./kafka" }
 archive-primitives = { path = "./primitives" }
 
 # Polkadot / Kusama
-polkadot-runtime =  { git = "https://github.com/paritytech/polkadot", tag = "v0.9.15", optional = true }
-kusama-runtime = { git = "https://github.com/paritytech/polkadot", tag = "v0.9.15", optional = true }
+polkadot-runtime =  { git = "https://github.com/paritytech/polkadot", tag = "v0.9.16", optional = true }
+kusama-runtime = { git = "https://github.com/paritytech/polkadot", tag = "v0.9.16", optional = true }
 
 [features]
 polkadot = ["polkadot-runtime"]

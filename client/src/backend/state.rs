@@ -11,10 +11,9 @@ use sc_state_db::{MetaDb, NodeDb, StateDb};
 use sp_database::Database;
 use sp_runtime::traits::{Block as BlockT, HashFor};
 use sp_state_machine::{
-    Backend as StateBackend, DefaultError, MemoryDB, StateMachineStats, Storage, TrieBackend,
-    TrieDBMut, UsageInfo,
+    Backend as StateBackend, DefaultError, StateMachineStats, Storage, TrieBackend, UsageInfo,
 };
-use sp_storage::ChildInfo;
+use sp_storage::{ChildInfo, StateVersion};
 
 use crate::columns;
 
@@ -179,22 +178,25 @@ impl<B: BlockT> StateBackend<HashFor<B>> for RefTrackingState<B> {
     fn storage_root<'a>(
         &self,
         delta: impl Iterator<Item = (&'a [u8], Option<&'a [u8]>)>,
+        state_version: StateVersion,
     ) -> (B::Hash, Self::Transaction)
     where
         B::Hash: Ord,
     {
-        self.state.storage_root(delta)
+        self.state.storage_root(delta, state_version)
     }
 
     fn child_storage_root<'a>(
         &self,
         child_info: &ChildInfo,
         delta: impl Iterator<Item = (&'a [u8], Option<&'a [u8]>)>,
+        state_version: StateVersion,
     ) -> (B::Hash, bool, Self::Transaction)
     where
         B::Hash: Ord,
     {
-        self.state.child_storage_root(child_info, delta)
+        self.state
+            .child_storage_root(child_info, delta, state_version)
     }
 
     fn pairs(&self) -> Vec<(Vec<u8>, Vec<u8>)> {
@@ -223,15 +225,6 @@ impl<B: BlockT> StateBackend<HashFor<B>> for RefTrackingState<B> {
 }
 
 pub struct DbGenesisStorage<Block: BlockT>(pub Block::Hash);
-impl<Block: BlockT> DbGenesisStorage<Block> {
-    pub fn new() -> Self {
-        let mut root = Block::Hash::default();
-        let mut mdb = MemoryDB::<HashFor<Block>>::default();
-        TrieDBMut::<HashFor<Block>>::new(&mut mdb, &mut root);
-        DbGenesisStorage(root)
-    }
-}
-
 impl<Block: BlockT> Storage<HashFor<Block>> for DbGenesisStorage<Block> {
     fn get(&self, _key: &Block::Hash, _prefix: Prefix) -> Result<Option<DBValue>, DefaultError> {
         Ok(None)

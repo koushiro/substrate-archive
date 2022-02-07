@@ -7,7 +7,7 @@ use sp_runtime::{generic::BlockId, traits::Block as BlockT, Justification, Justi
 use sp_state_machine::{
     ChildStorageCollection, IndexOperation, OffchainChangesCollection, StorageCollection,
 };
-use sp_storage::Storage;
+use sp_storage::{StateVersion, Storage};
 
 use crate::{backend::state::RefTrackingState, error::BlockchainResult};
 
@@ -51,12 +51,17 @@ where
         &mut self,
         _storage: Storage,
         _commit: bool,
+        _state_version: StateVersion,
     ) -> BlockchainResult<Block::Hash> {
         log::warn!("Cannot set genesis state of a read-only backend, storage not updated");
         Ok(Default::default())
     }
 
-    fn reset_storage(&mut self, _storage: Storage) -> BlockchainResult<Block::Hash> {
+    fn reset_storage(
+        &mut self,
+        _storage: Storage,
+        _state_version: StateVersion,
+    ) -> BlockchainResult<Block::Hash> {
         log::warn!("Cannot modify storage of a read-only backend, storage not reset");
         Ok(Default::default())
     }
