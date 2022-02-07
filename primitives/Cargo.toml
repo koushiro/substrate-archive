@@ -1,8 +1,9 @@
 [package]
 name = "archive-primitives"
 version = "0.1.0"
-authors = ["Patract <https://github.com/patractlabs>"]
-edition = "2018"
+authors = ["koushiro <koushiro.cqx@gmail.com>"]
+edition = "2021"
+rust-version = "1.56.1"
 
 [dependencies]
 sp-runtime = { version = "4.1.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
