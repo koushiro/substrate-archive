@@ -158,8 +158,8 @@ where
         let hash = match block {
             // special case for genesis initialization
             BlockId::Hash(h) if h == Default::default() => {
-                let genesis_storage = DbGenesisStorage::<Block>::new();
-                let root = genesis_storage.0;
+                let genesis_storage = DbGenesisStorage::<Block>(Block::Hash::default());
+                let root = Block::Hash::default();
                 let db_state = DbState::<Block>::new(Arc::new(genesis_storage), root);
                 let state = RefTrackingState::new(db_state, self.storage.clone(), None);
                 return Ok(state);

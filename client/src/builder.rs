@@ -3,7 +3,7 @@ use std::{str::FromStr, sync::Arc};
 use sc_client_api::execution_extensions::{ExecutionExtensions, ExecutionStrategies};
 use sc_executor::{NativeElseWasmExecutor, NativeExecutionDispatch};
 use sp_core::testing::TaskExecutor;
-use sp_runtime::traits::Block as BlockT;
+use sp_runtime::traits::{Block as BlockT, NumberFor};
 use sp_state_machine::ExecutionStrategy;
 
 use crate::{
@@ -52,6 +52,7 @@ where
             config.executor.wasm_exec_method.into(),
             config.executor.default_heap_pages,
             config.executor.max_runtime_instances,
+            config.executor.runtime_cache_size,
         ),
         Box::new(TaskExecutor::new()),
         sc_service::ClientConfig {
@@ -60,18 +61,20 @@ where
             wasm_runtime_overrides: config.wasm_runtime_overrides,
             no_genesis: false,
             wasm_runtime_substitutes: config
-                .wasm_runtime_substitutes
+                .code_substitutes
                 .into_iter()
-                .map(|(hash, code)| {
-                    let hash = hash.parse::<Block::Hash>().map_err(|_| {
+                .map(|(n, code)| {
+                    let hash = n.parse::<NumberFor::<Block>>().map_err(|_| {
                         unknown_block_err(format!(
-                            "Failed to parse `{}` as block hash for code substitute.",
-                            hash
+                            "Failed to parse `{}` as block number for code substitutes. \
+                            In an old version the key for code substitute was a block hash. \
+                            Please update the chain spec to a version that is compatible with your node.",
+                            n
                         ))
                     })?;
                     Ok((hash, code))
                 })
-                .collect::<BlockchainResult<HashMap<Block::Hash, Vec<u8>>>>()?,
+                .collect::<BlockchainResult<HashMap<NumberFor<Block>, Vec<u8>>>>()?,
         },
     )?;
 

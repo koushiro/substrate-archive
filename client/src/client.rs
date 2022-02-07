@@ -66,7 +66,7 @@ where
 
     /// Get the RuntimeVersion by id.
     pub fn runtime_version(&self, id: &BlockId<Block>) -> BlockchainResult<RuntimeVersion> {
-        self.executor.runtime_version(id)
+        CallExecutor::runtime_version(&self.executor, id)
     }
 
     /// Get the code at a given block.
